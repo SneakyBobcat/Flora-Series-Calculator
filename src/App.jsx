@@ -427,11 +427,11 @@ function resolveSupplementDose(supp,stageId,gallons,waterType,feedStrength){
   return {ml:+(base*gallons*boost).toFixed(1),tsp:+(base*gallons*boost/4.92892).toFixed(2),note:rule.note||null,unit:supp.unit||"ml"};
 }
 
-function computeCore(systemId,stageId,strength,gallons,plantId,waterType,substrate){
+function computeCore(systemId,stageId,strength,gallons,plantId,waterType,substrate,usePlantMod=true){
   const sched=SCHEDULES[systemId]?.[stageId];if(!sched)return null;
   const s=sched[strength];if(!s)return null;
   const isPowder=SYSTEM_CONFIGS[systemId]?.isPowder;
-  const mod=(!isPowder&&PLANT_MODIFIERS[plantId]?.stages?.[stageId])||null;
+  const mod=(usePlantMod&&!isPowder&&PLANT_MODIFIERS[plantId]?.stages?.[stageId])||null;
   const SUBSTRATE_MULT={hydro:1.0,inert:0.9,potting:0.6,soil:0.4};
   const smult=SUBSTRATE_MULT[substrate]??1.0;
   const adj=(base,key)=>base*(mod?.[key]??1.0)*smult;
@@ -726,6 +726,7 @@ function getSuppRec(supp, plantId, stageId) {
 export default function FloraApp() {
   const [substrate,  setSubstrate]  = useState(null); // "hydro"|"inert"|"potting"|"soil"
   const [brand,     setBrand]     = useState(null); // "classic" | "florapro"
+  const [usePlantMod, setUsePlantMod] = useState(true);
   const [photoperiod, setPhotoperiod] = useState(null); // "18h"|"12h"
   const [system,    setSystem]    = useState(null);
   const [plant,     setPlant]     = useState(null);
@@ -782,8 +783,8 @@ export default function FloraApp() {
 
   const computed = useMemo(()=>{
     if(!system||!plant||!stage||volume<=0)return null;
-    return computeCore(system,stage,strength,gallons,plant,water,substrate);
-  },[system,plant,stage,strength,volume,unit,water,substrate]);
+    return computeCore(system,stage,strength,gallons,plant,water,substrate,usePlantMod);
+  },[system,plant,stage,strength,volume,unit,water,substrate,usePlantMod]);
 
   const core=computed?.core??null,included=computed?.included??{},isFlush=computed?.isFlush??false;
 
@@ -928,19 +929,33 @@ export default function FloraApp() {
         <div style={sectionLabel()}>SELECT PROGRAM</div>
 
         {/* Classic */}
-        <button onClick={()=>{setBrand("classic");setSystem(null);setPlant(null);setStage(null);setSupps(new Set());setStep(2);}}
-          style={{display:"flex",alignItems:"stretch",width:"100%",marginBottom:10,background:brand==="classic"?`linear-gradient(135deg,${GH.green}15,${GH.green}05)`:GH.card,border:`1px solid ${brand==="classic"?GH.green:GH.border}`,cursor:"pointer",textAlign:"left",padding:0,transition:"all 0.15s"}}>
-          <div style={{width:72,background:`${GH.green}22`,borderRight:`1px solid ${GH.green}44`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,gap:3,padding:"20px 0"}}>
-            <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:900,color:GH.green,letterSpacing:"0.12em"}}>FLORA</span>
-            <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:900,color:GH.green,letterSpacing:"0.12em"}}>SERIES</span>
-          </div>
-          <div style={{flex:1,padding:"18px 20px"}}>
-            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,fontWeight:900,color:brand==="classic"?GH.green:GH.text,textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:4}}>Classic</div>
-            <div style={{fontSize:12,color:GH.muted,fontFamily:"'DM Sans',sans-serif",marginBottom:6}}>3-Part · 6-Part · 10-Part</div>
-            <div style={{fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}>Liquid concentrate systems. The foundation of Flora Series nutrition.</div>
-          </div>
-          {brand==="classic"&&<div style={{width:4,background:GH.green,flexShrink:0}}/>}
-        </button>
+        <div style={{marginBottom:10,background:brand==="classic"?`linear-gradient(135deg,${GH.green}15,${GH.green}05)`:GH.card,border:`1px solid ${brand==="classic"?GH.green:GH.border}`,transition:"all 0.15s"}}>
+          <button onClick={()=>{setBrand("classic");setSystem(null);setPlant(null);setStage(null);setSupps(new Set());setStep(2);}}
+            style={{display:"flex",alignItems:"stretch",width:"100%",background:"none",border:"none",cursor:"pointer",textAlign:"left",padding:0}}>
+            <div style={{width:72,background:`${GH.green}22`,borderRight:`1px solid ${GH.green}44`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,gap:3,padding:"20px 0"}}>
+              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:900,color:GH.green,letterSpacing:"0.12em"}}>FLORA</span>
+              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:900,color:GH.green,letterSpacing:"0.12em"}}>SERIES</span>
+            </div>
+            <div style={{flex:1,padding:"18px 20px"}}>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,fontWeight:900,color:brand==="classic"?GH.green:GH.text,textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:4}}>Classic</div>
+              <div style={{fontSize:12,color:GH.muted,fontFamily:"'DM Sans',sans-serif",marginBottom:6}}>3-Part · 6-Part · 10-Part</div>
+              <div style={{fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}>Liquid concentrate systems. The foundation of Flora Series nutrition.</div>
+            </div>
+            {brand==="classic"&&<div style={{width:4,background:GH.green,flexShrink:0}}/>}
+          </button>
+          {brand==="classic"&&(
+            <div style={{borderTop:`1px solid ${GH.green}33`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+              <div>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,fontWeight:700,color:GH.green,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:2}}>Plant Modifiers</div>
+                <div style={{fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}}>Adjusts doses for your specific crop — e.g. cannabis gets more nitrogen, orchids get less.</div>
+              </div>
+              <button onClick={e=>{e.stopPropagation();setUsePlantMod(v=>!v);}}
+                style={{flexShrink:0,width:44,height:24,borderRadius:12,background:usePlantMod?GH.green:"#ccc",border:"none",cursor:"pointer",position:"relative",transition:"background 0.2s"}}>
+                <div style={{position:"absolute",top:3,left:usePlantMod?22:3,width:18,height:18,borderRadius:9,background:"#fff",transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* FloraPro */}
         <button onClick={()=>{setBrand("florapro");setSystem(null);setPlant(null);setStage(null);setSupps(new Set());setStep(2);}}
@@ -1319,8 +1334,8 @@ export default function FloraApp() {
           </div>
         )}
 
-        {/* Plant modifier banner — liquid systems only */}
-        {!sysCfg?.isPowder&&plantModMeta?.mods&&plantMod&&(
+        {/* Plant modifier banner — liquid systems only, when modifier is active */}
+        {!sysCfg?.isPowder&&usePlantMod&&plantModMeta?.mods&&plantMod&&(
           <div style={{background:GH.card,border:`1px solid ${GH.green}44`,borderLeft:`4px solid ${GH.green}`,padding:"12px 16px",marginBottom:12}}>
             <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,color:GH.green,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:8}}>{plantObj.icon} {plantObj.name} — DOSE ADJUSTMENTS ACTIVE</div>
             {plantModMeta.mods.map((m,i)=>(
@@ -1444,7 +1459,7 @@ export default function FloraApp() {
           {steps.map((label,i)=>{
             const active=step===i,done=i<step;
             return (
-              <button key={i} onClick={()=>goTo(i)} style={{flex:"1 0 0",minWidth:0,padding:"12px 2px",background:"none",border:"none",borderBottom:`2px solid ${active?"#78BE20":"transparent"}`,color:active?"#78BE20":done?"#555":"#bbb",cursor:"pointer",fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",transition:"all 0.2s",whiteSpace:"nowrap"}}>
+              <button key={i} onClick={()=>goTo(i)} style={{flex:"1 0 0",minWidth:0,padding:"12px 2px",background:"none",border:"none",borderBottom:`2px solid ${active?"#78BE20":"transparent"}`,color:active?"#78BE20":done?"#555":"#bbb",cursor:"pointer",fontFamily:"'Barlow Condensed',sans-serif",fontSize:10,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",transition:"all 0.2s",whiteSpace:"nowrap"}}>
                 {done?"✓ ":""}{label}
               </button>
             );
