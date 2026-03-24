@@ -14,14 +14,16 @@ Mobile-first Progressive Web App for General Hydroponics nutrient systems.
 
 ## Features
 
-- 8-step wizard: Brand → System → Plant → Photoperiod → Stage → Settings → Supplements → Results
+- 9-step wizard: Medium → Brand → System → Plant → Photoperiod → Stage → Settings → Supplements → Results
+- Substrate-aware dosing — Hydroponics / Inert / Potting Soil / Ground Soil with automatic dose reduction
 - 10 supported crops with individual EC ceilings and dose adjustments (Classic systems)
 - Water source calibration — Tap, Soft, RO/DI
 - Light / Medium / Aggressive feed strength tiers
 - EC budget with per-plant ceiling alerts
 - Optional supplement recommendations by plant type and stage (8 categories, collapsible)
-- Mixing order guide for every product combination
+- Always-visible mixing order guide styled as product rows with numbered steps
 - Direct gram totals for dry concentrate systems — no stock-solution math required
+- Substrate-specific pH targets in the mixing order guide
 
 ---
 
@@ -29,7 +31,7 @@ Mobile-first Progressive Web App for General Hydroponics nutrient systems.
 
 ### 1 — Push to GitHub
 1. Create a repo at **github.com** (e.g. `gh-nutrient-calculator`)
-2. Upload all files from this folder into the repo
+2. Upload all files from this folder into the repo (drag and drop works)
 
 ### 2 — Deploy on Netlify
 1. Sign up at **netlify.com** with your GitHub account
@@ -71,10 +73,10 @@ Push any change to GitHub → Netlify rebuilds automatically → users get the u
 
 ```
 gh-nutrient-calculator/
-├── index.html              # App shell with PWA + iOS meta tags
-├── vite.config.js          # Vite + PWA plugin
+├── index.html
+├── vite.config.js
 ├── package.json
-├── netlify.toml            # Netlify build + redirect config
+├── netlify.toml
 ├── public/
 │   ├── favicon.svg
 │   ├── apple-touch-icon.png
@@ -82,6 +84,6 @@ gh-nutrient-calculator/
 │       ├── icon-192.png
 │       └── icon-512.png
 └── src/
-    ├── main.jsx            # React entry point
-    └── App.jsx             # Full calculator — all brands, logic, and UI
+    ├── main.jsx
+    └── App.jsx
 ```

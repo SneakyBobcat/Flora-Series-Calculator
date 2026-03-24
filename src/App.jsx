@@ -427,19 +427,20 @@ function resolveSupplementDose(supp,stageId,gallons,waterType,feedStrength){
   return {ml:+(base*gallons*boost).toFixed(1),tsp:+(base*gallons*boost/4.92892).toFixed(2),note:rule.note||null,unit:supp.unit||"ml"};
 }
 
-function computeCore(systemId,stageId,strength,gallons,plantId,waterType){
+function computeCore(systemId,stageId,strength,gallons,plantId,waterType,substrate){
   const sched=SCHEDULES[systemId]?.[stageId];if(!sched)return null;
   const s=sched[strength];if(!s)return null;
   const isPowder=SYSTEM_CONFIGS[systemId]?.isPowder;
   const mod=(!isPowder&&PLANT_MODIFIERS[plantId]?.stages?.[stageId])||null;
-  const adj=(base,key)=>base*(mod?.[key]??1.0);
+  const SUBSTRATE_MULT={hydro:1.0,inert:0.9,potting:0.6,soil:0.4};
+  const smult=SUBSTRATE_MULT[substrate]??1.0;
+  const adj=(base,key)=>base*(mod?.[key]??1.0)*smult;
   const ml=(base,key)=>+(adj(base,key)*gallons).toFixed(1);
   const tsp=m=>+(m/4.92892).toFixed(2);
-  // For powder systems micro/gro/bloom are always 0 — doses live in includedKeys
   const core={micro:{ml:ml(s.micro||0,"micro"),tsp:tsp(ml(s.micro||0,"micro"))},gro:{ml:ml(s.gro||0,"gro"),tsp:tsp(ml(s.gro||0,"gro"))},bloom:{ml:ml(s.bloom||0,"bloom"),tsp:tsp(ml(s.bloom||0,"bloom"))}};
   const included={};
   const cfg=SYSTEM_CONFIGS[systemId];
-  if(cfg){for(const key of cfg.includedKeys){const raw=s[key]??0;if(raw<=0){included[key]={ml:0,tsp:0,unit:"ml",...INCL_META[key]};continue;}const boost=WATER_BOOST_INCL[key]?.[waterType]??1.0;const ml2=+(raw*gallons*boost).toFixed(1);included[key]={ml:ml2,tsp:+(ml2/4.92892).toFixed(2),unit:"ml",...INCL_META[key]};}}
+  if(cfg){for(const key of cfg.includedKeys){const raw=s[key]??0;const mu=(INCL_META[key]?.unit)||"ml";if(raw<=0){included[key]={ml:0,tsp:0,unit:mu,...INCL_META[key]};continue;}const boost=WATER_BOOST_INCL[key]?.[waterType]??1.0;const ml2=+(raw*gallons*boost*smult).toFixed(1);included[key]={ml:ml2,tsp:+(ml2/4.92892).toFixed(2),unit:mu,...INCL_META[key]};}}
   return {core,included,isFlush:!!sched.isFlush,seedlingFixed:!!sched.seedlingFixed};
 }
 
@@ -723,6 +724,7 @@ function getSuppRec(supp, plantId, stageId) {
 
 // ─── APP ─────────────────────────────────────────────────────────────────────
 export default function FloraApp() {
+  const [substrate,  setSubstrate]  = useState(null); // "hydro"|"inert"|"potting"|"soil"
   const [brand,     setBrand]     = useState(null); // "classic" | "florapro"
   const [photoperiod, setPhotoperiod] = useState(null); // "18h"|"12h"
   const [system,    setSystem]    = useState(null);
@@ -780,8 +782,8 @@ export default function FloraApp() {
 
   const computed = useMemo(()=>{
     if(!system||!plant||!stage||volume<=0)return null;
-    return computeCore(system,stage,strength,gallons,plant,water);
-  },[system,plant,stage,strength,volume,unit,water]);
+    return computeCore(system,stage,strength,gallons,plant,water,substrate);
+  },[system,plant,stage,strength,volume,unit,water,substrate]);
 
   const core=computed?.core??null,included=computed?.included??{},isFlush=computed?.isFlush??false;
 
@@ -814,16 +816,17 @@ export default function FloraApp() {
   },[plantObj,sysCfg,photoperiod]);
 
   const hasResults = core&&plantObj&&stageObj;
-  const steps = ["Brand","System","Plant","Photo","Stage","Settings","Supps","Results"];
+  const steps = ["Medium","Brand","System","Plant","Photo","Stage","Settings","Supps","Results"];
   const goTo=(i)=>{
     if(i===0)setStep(0);
-    else if(i===1&&brand)setStep(1);
-    else if(i===2&&system)setStep(2);
-    else if(i===3&&plant)setStep(3);
-    else if(i===4&&photoperiod)setStep(4);
-    else if(i===5&&stage)setStep(5);
+    else if(i===1&&substrate)setStep(1);
+    else if(i===2&&brand)setStep(2);
+    else if(i===3&&system)setStep(3);
+    else if(i===4&&plant)setStep(4);
+    else if(i===5&&photoperiod)setStep(5);
     else if(i===6&&stage)setStep(6);
-    else if(i===7&&hasResults)setStep(7);
+    else if(i===7&&stage)setStep(7);
+    else if(i===8&&hasResults)setStep(8);
   };
 
   // ── GH BRAND DESIGN TOKENS ──────────────────────────────────────────────
@@ -841,8 +844,43 @@ export default function FloraApp() {
   };
 
   const renderStep = () => {
-    // ── STEP 0: BRAND PICKER ────────────────────────────────────────────────
-    if(step===0) return (
+    // ── STEP 0: SUBSTRATE / MEDIUM ──────────────────────────────────────────
+    if(step===0) {
+      const SUBSTRATE_OPTIONS = [
+        { value:"hydro",   icon:"💧", label:"Hydroponics",  sub:"DWC · NFT · Aeroponics · Ebb & Flow",         mult:"Full chart dose" },
+        { value:"inert",   icon:"🪨", label:"Inert Medium",  sub:"Coco · Rockwool · Perlite · Clay pebbles",    mult:"90% of chart dose" },
+        { value:"potting", icon:"🪴", label:"Potting Soil",  sub:"Pre-amended mixes · Fox Farm · ProMix",       mult:"60% of chart dose" },
+        { value:"soil",    icon:"🌍", label:"Ground Soil",   sub:"Garden beds · native soil",                   mult:"40% of chart dose" },
+      ];
+      return (
+        <div>
+          <div style={sectionLabel()}>SELECT GROWING MEDIUM</div>
+          <div style={{fontSize:12,color:GH.muted,fontFamily:"'DM Sans',sans-serif",marginBottom:20,lineHeight:1.6}}>
+            Your growing medium affects how much nutrient your plants can access. Soil buffers and holds nutrition longer — hydroponic systems require the full chart dose.
+          </div>
+          {SUBSTRATE_OPTIONS.map(opt=>{
+            const sel=substrate===opt.value;
+            return (
+              <button key={opt.value} onClick={()=>{setSubstrate(opt.value);setStep(1);}}
+                style={{display:"flex",alignItems:"center",gap:16,width:"100%",marginBottom:10,padding:"18px 20px",background:sel?`${GH.green}18`:GH.card,border:`1px solid ${sel?GH.green:GH.border}`,cursor:"pointer",textAlign:"left",transition:"all 0.15s",position:"relative"}}>
+                {sel&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:4,background:GH.green}}/>}
+                <span style={{fontSize:36,flexShrink:0}}>{opt.icon}</span>
+                <div style={{flex:1,paddingLeft:sel?4:0}}>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:sel?GH.green:GH.text,textTransform:"uppercase",letterSpacing:"0.05em"}}>{opt.label}</div>
+                  <div style={{fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif",marginTop:2}}>{opt.sub}</div>
+                </div>
+                <div style={{textAlign:"right",flexShrink:0}}>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,color:sel?GH.green:GH.muted,letterSpacing:"0.08em"}}>{opt.mult}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // ── STEP 1: BRAND PICKER ────────────────────────────────────────────────
+    if(step===1) return (
       <div>
         {storageReady&&savedRuns.length>0&&(
           <div style={{marginBottom:32}}>
@@ -869,8 +907,8 @@ export default function FloraApp() {
                   </div>
                   {!isConf?(
                     <div style={{display:"flex",borderTop:`1px solid ${GH.border}`}}>
-                      <button onClick={()=>loadRun(run,7)} style={runBtn(GH.green)}>▶ LOAD</button>
-                      <button onClick={()=>loadRun(run,5)} style={{...runBtn(GH.blue),borderLeft:`1px solid ${GH.border}`}}>✎ MODIFY</button>
+                      <button onClick={()=>loadRun(run,8)} style={runBtn(GH.green)}>▶ LOAD</button>
+                      <button onClick={()=>loadRun(run,6)} style={{...runBtn(GH.blue),borderLeft:`1px solid ${GH.border}`}}>✎ MODIFY</button>
                       <button onClick={()=>setConfirmDel(run.id)} style={{...runBtn("#e05050"),borderLeft:`1px solid ${GH.border}`}}>✕ DELETE</button>
                     </div>
                   ):(
@@ -890,7 +928,7 @@ export default function FloraApp() {
         <div style={sectionLabel()}>SELECT PROGRAM</div>
 
         {/* Classic */}
-        <button onClick={()=>{setBrand("classic");setSystem(null);setPlant(null);setStage(null);setSupps(new Set());setStep(1);}}
+        <button onClick={()=>{setBrand("classic");setSystem(null);setPlant(null);setStage(null);setSupps(new Set());setStep(2);}}
           style={{display:"flex",alignItems:"stretch",width:"100%",marginBottom:10,background:brand==="classic"?`linear-gradient(135deg,${GH.green}15,${GH.green}05)`:GH.card,border:`1px solid ${brand==="classic"?GH.green:GH.border}`,cursor:"pointer",textAlign:"left",padding:0,transition:"all 0.15s"}}>
           <div style={{width:72,background:`${GH.green}22`,borderRight:`1px solid ${GH.green}44`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,gap:3,padding:"20px 0"}}>
             <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:900,color:GH.green,letterSpacing:"0.12em"}}>FLORA</span>
@@ -905,7 +943,7 @@ export default function FloraApp() {
         </button>
 
         {/* FloraPro */}
-        <button onClick={()=>{setBrand("florapro");setSystem(null);setPlant(null);setStage(null);setSupps(new Set());setStep(1);}}
+        <button onClick={()=>{setBrand("florapro");setSystem(null);setPlant(null);setStage(null);setSupps(new Set());setStep(2);}}
           style={{display:"flex",alignItems:"stretch",width:"100%",marginBottom:10,background:brand==="florapro"?`linear-gradient(135deg,#1B9E7815,#1B9E7805)`:GH.card,border:`1px solid ${brand==="florapro"?"#1B9E78":GH.border}`,cursor:"pointer",textAlign:"left",padding:0,transition:"all 0.15s"}}>
           <div style={{width:72,background:"#1B9E7822",borderRight:"1px solid #1B9E7844",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,gap:3,padding:"20px 0"}}>
             <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:900,color:"#1B9E78",letterSpacing:"0.12em"}}>FLORA</span>
@@ -920,7 +958,7 @@ export default function FloraApp() {
         </button>
 
         {/* BioThrive */}
-        <button onClick={()=>{setBrand("biothrive");setSystem(null);setPlant(null);setStage(null);setSupps(new Set());setStep(1);}}
+        <button onClick={()=>{setBrand("biothrive");setSystem(null);setPlant(null);setStage(null);setSupps(new Set());setStep(2);}}
           style={{display:"flex",alignItems:"stretch",width:"100%",marginBottom:10,background:brand==="biothrive"?`linear-gradient(135deg,#E8910A15,#E8910A05)`:GH.card,border:`1px solid ${brand==="biothrive"?"#E8910A":GH.border}`,cursor:"pointer",textAlign:"left",padding:0,transition:"all 0.15s"}}>
           <div style={{width:72,background:"#E8910A22",borderRight:"1px solid #E8910A44",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,gap:3,padding:"20px 0"}}>
             <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:900,color:"#E8910A",letterSpacing:"0.08em"}}>BIO</span>
@@ -935,7 +973,7 @@ export default function FloraApp() {
         </button>
 
         {/* MaxiSeries */}
-        <button onClick={()=>{setBrand("maxi");setSystem(null);setPlant(null);setStage(null);setSupps(new Set());setStep(1);}}
+        <button onClick={()=>{setBrand("maxi");setSystem(null);setPlant(null);setStage(null);setSupps(new Set());setStep(2);}}
           style={{display:"flex",alignItems:"stretch",width:"100%",marginBottom:10,background:brand==="maxi"?`linear-gradient(135deg,#1565C015,#1565C005)`:GH.card,border:`1px solid ${brand==="maxi"?"#1565C0":GH.border}`,cursor:"pointer",textAlign:"left",padding:0,transition:"all 0.15s"}}>
           <div style={{width:72,background:"#1565C022",borderRight:"1px solid #1565C044",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,gap:3,padding:"20px 0"}}>
             <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:900,color:"#1565C0",letterSpacing:"0.1em"}}>MAXI</span>
@@ -950,7 +988,7 @@ export default function FloraApp() {
         </button>
 
         {/* FloraNova */}
-        <button onClick={()=>{setBrand("floranvoa");setSystem(null);setPlant(null);setStage(null);setSupps(new Set());setStep(1);}}
+        <button onClick={()=>{setBrand("floranvoa");setSystem(null);setPlant(null);setStage(null);setSupps(new Set());setStep(2);}}
           style={{display:"flex",alignItems:"stretch",width:"100%",marginBottom:10,background:brand==="floranvoa"?`linear-gradient(135deg,#00838F15,#00838F05)`:GH.card,border:`1px solid ${brand==="floranvoa"?"#00838F":GH.border}`,cursor:"pointer",textAlign:"left",padding:0,transition:"all 0.15s"}}>
           <div style={{width:72,background:"#00838F22",borderRight:"1px solid #00838F44",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,gap:3,padding:"20px 0"}}>
             <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:900,color:"#00838F",letterSpacing:"0.06em"}}>FLORA</span>
@@ -967,7 +1005,7 @@ export default function FloraApp() {
     );
 
     // ── STEP 1: SYSTEM PICKER ───────────────────────────────────────────────
-    if(step===1) {
+    if(step===2) {
       const brandSystems = brand==="classic"
         ? [SYSTEM_CONFIGS["3part"],SYSTEM_CONFIGS["6part"],SYSTEM_CONFIGS["10part"]]
         : brand==="florapro"
@@ -987,7 +1025,7 @@ export default function FloraApp() {
           {brandSystems.map(sys=>{
             const sel=system===sys.id;
             return (
-              <button key={sys.id} onClick={()=>{setSystem(sys.id);setPlant(null);setStage(null);setSupps(new Set());setStep(2);}}
+              <button key={sys.id} onClick={()=>{setSystem(sys.id);setPlant(null);setStage(null);setSupps(new Set());setStep(3);}}
                 style={{display:"flex",alignItems:"stretch",width:"100%",marginBottom:8,background:sel?`linear-gradient(135deg,${sys.color}15,${sys.color}05)`:GH.card,border:`1px solid ${sel?sys.color:GH.border}`,cursor:"pointer",textAlign:"left",padding:0,transition:"all 0.15s"}}>
                 <div style={{width:72,background:`${sys.color}22`,borderRight:`1px solid ${sys.color}44`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,gap:2,padding:"20px 0"}}>
                   <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:sys.isPowder?13:28,fontWeight:900,color:sys.color,lineHeight:1}}>{sys.parts}</span>
@@ -1007,7 +1045,7 @@ export default function FloraApp() {
     }
 
     // ── STEP 2: PLANT ───────────────────────────────────────────────────────
-    if(step===2) return (
+    if(step===3) return (
       <div>
         <div style={sectionLabel()}>SELECT CROP</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
@@ -1015,7 +1053,7 @@ export default function FloraApp() {
             const sel=plant===p.id;
             const stgCount=p.maxStages.filter(s=>sysCfg?.stages.includes(s)).length;
             return (
-              <button key={p.id} onClick={()=>{setPlant(p.id);setStage(null);setPhotoperiod(null);setSupps(new Set());setStep(3);}}
+              <button key={p.id} onClick={()=>{setPlant(p.id);setStage(null);setPhotoperiod(null);setSupps(new Set());setStep(4);}}
                 style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"20px 12px",background:sel?`linear-gradient(135deg,${GH.green}20,${GH.green}08)`:GH.card,border:`1px solid ${sel?GH.green:GH.border}`,cursor:"pointer",textAlign:"center",position:"relative",transition:"all 0.15s"}}>
                 {sel&&<div style={{position:"absolute",top:0,left:0,right:0,height:3,background:GH.green}}/>}
                 <span style={{fontSize:36,marginBottom:8}}>{p.icon}</span>
@@ -1029,7 +1067,7 @@ export default function FloraApp() {
     );
 
     // ── STEP 3: PHOTOPERIOD ─────────────────────────────────────────────────
-    if(step===3) {
+    if(step===4) {
       // Determine if this system uses photoperiod-specific stages
       const sysHasPhoto = avail.some(s=>(STAGE_PHOTO[s.id]||"any")!=="any");
       return (
@@ -1046,7 +1084,7 @@ export default function FloraApp() {
           ].map(opt=>{
             const sel=photoperiod===opt.value;
             return (
-              <button key={opt.value} onClick={()=>{setPhotoperiod(opt.value);setStage(null);setStep(4);}}
+              <button key={opt.value} onClick={()=>{setPhotoperiod(opt.value);setStage(null);setStep(5);}}
                 style={{display:"flex",alignItems:"center",gap:16,width:"100%",marginBottom:10,padding:"22px 20px",background:sel?`${GH.green}18`:GH.card,border:`1px solid ${sel?GH.green:GH.border}`,cursor:"pointer",textAlign:"left",transition:"all 0.15s",position:"relative"}}>
                 {sel&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:4,background:GH.green}}/>}
                 <span style={{fontSize:40}}>{opt.icon}</span>
@@ -1063,7 +1101,7 @@ export default function FloraApp() {
     }
 
     // ── STEP 4: STAGE ───────────────────────────────────────────────────────
-    if(step===4) return (
+    if(step===5) return (
       <div>
         <div style={sectionLabel()}>GROWTH STAGE</div>
         {avail.map(s=>{
@@ -1071,7 +1109,7 @@ export default function FloraApp() {
           // Strip photoperiod suffix from label since user already chose it
           const cleanLabel = s.label.replace(/ \((18|12)H\)/g,"").trim();
           return (
-            <button key={s.id} onClick={()=>{setStage(s.id);setStep(5);}}
+            <button key={s.id} onClick={()=>{setStage(s.id);setStep(6);}}
               style={{display:"flex",alignItems:"center",gap:14,width:"100%",marginBottom:8,padding:"16px 18px",background:sel?`${s.color}18`:GH.card,border:`1px solid ${sel?s.color:GH.border}`,cursor:"pointer",textAlign:"left",transition:"all 0.15s"}}>
               <div style={{width:14,height:14,borderRadius:"50%",background:s.color,flexShrink:0,boxShadow:sel?`0 0 12px ${s.color}88`:"none"}}/>
               <div style={{flex:1}}>
@@ -1086,7 +1124,7 @@ export default function FloraApp() {
     );
 
     // ── STEP 5: SETTINGS ────────────────────────────────────────────────────
-    if(step===5) return (
+    if(step===6) return (
       <div>
         <div style={sectionLabel()}>RESERVOIR VOLUME</div>
         <div style={{display:"flex",alignItems:"center",background:GH.card,border:`1px solid ${GH.border}`,overflow:"hidden",marginBottom:8}}>
@@ -1132,12 +1170,12 @@ export default function FloraApp() {
             </button>
           );
         })}
-        <button onClick={()=>setStep(6)} style={ghPrimaryBtn()}>NEXT: SUPPLEMENTS →</button>
+        <button onClick={()=>setStep(7)} style={ghPrimaryBtn()}>NEXT: SUPPLEMENTS →</button>
       </div>
     );
 
     // ── STEP 6: SUPPLEMENTS ─────────────────────────────────────────────────
-    if(step===6) {
+    if(step===7) {
       // Group suppData by category, sorted by CAT_META order
       const catOrder = Object.entries(CAT_META).sort((a,b)=>a[1].order-b[1].order).map(([k])=>k);
       const grouped = catOrder.map(catId => {
@@ -1223,7 +1261,7 @@ export default function FloraApp() {
                           {applicable&&s.dose?(
                             <div style={{display:"flex",gap:8,alignItems:"baseline",marginTop:4,flexWrap:"wrap"}}>
                               <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:700,color:on?rowColor:GH.dim,lineHeight:1}}>{s.dose.ml}</span>
-                              <span style={{fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}>{s.dose.unit} / {s.dose.tsp} tsp</span>
+                              <span style={{fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}>{s.dose.unit}</span>
                               {s.dose.note&&<span style={{fontSize:10,color:GH.orange,background:"rgba(247,148,29,0.1)",border:"1px solid rgba(247,148,29,0.25)",padding:"1px 8px",fontFamily:"'DM Sans',sans-serif"}}>{s.dose.note}</span>}
                               {tapR&&<span style={{fontSize:10,color:GH.orange,fontFamily:"'DM Sans',sans-serif"}}>−50% tap</span>}
                             </div>
@@ -1241,13 +1279,13 @@ export default function FloraApp() {
               )}
             </div>
           ))}
-          {hasResults&&<button onClick={()=>setStep(7)} style={ghPrimaryBtn()}>VIEW FEEDING SCHEDULE →</button>}
+          {hasResults&&<button onClick={()=>setStep(8)} style={ghPrimaryBtn()}>VIEW FEEDING SCHEDULE →</button>}
         </div>
       );
     }
 
     // ── STEP 7: RESULTS ─────────────────────────────────────────────────────
-    if(step===7) return (
+    if(step===8) return (
       <div>
         {/* Context bar */}
         <div style={{background:GH.card,border:`1px solid ${GH.border}`,borderLeft:`4px solid ${sysCfg?.color||GH.green}`,padding:"12px 16px",marginBottom:12}}>
@@ -1263,9 +1301,23 @@ export default function FloraApp() {
             <span style={{fontSize:14,color:STRENGTH_META[strength].color,fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700}}>{STRENGTH_META[strength].label}</span>
             <span style={{color:GH.dim}}>·</span>
             <span style={{fontSize:14,color:GH.blue}}>{water==="ro"?"RO/DI":water==="soft"?"Soft":"Tap"}</span>
+            <span style={{color:GH.dim}}>·</span>
+            <span style={{fontSize:14,color:GH.muted,fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700}}>{substrate==="hydro"?"Hydroponics":substrate==="inert"?"Inert Medium":substrate==="potting"?"Potting Soil":"Ground Soil"}</span>
             {supps.size>0&&<><span style={{color:GH.dim}}>·</span><span style={{fontSize:14,color:GH.orange}}>{supps.size} supp{supps.size>1?"s":""}</span></>}
           </div>
         </div>
+
+        {/* Substrate reduction banner */}
+        {substrate&&substrate!=="hydro"&&(
+          <div style={{background:GH.card,border:`1px solid ${GH.orange}55`,borderLeft:`4px solid ${GH.orange}`,padding:"10px 16px",marginBottom:12}}>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,color:GH.orange,letterSpacing:"0.15em",marginBottom:2}}>
+              {substrate==="inert"?"INERT MEDIUM — 90% DOSE":substrate==="potting"?"POTTING SOIL — 60% DOSE":"GROUND SOIL — 40% DOSE"}
+            </div>
+            <div style={{fontSize:12,color:GH.muted,fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+              {substrate==="inert"?"Doses reduced 10% for inert media. Coco and rockwool have minimal buffering — monitor EC and pH closely.":substrate==="potting"?"Doses reduced 40% for potting mix. Pre-amended soils hold residual nutrition. Start light and increase if deficiencies appear.":"Doses reduced 60% for ground soil. Native soil chemistry and organic matter buffer nutrient uptake significantly."}
+            </div>
+          </div>
+        )}
 
         {/* Plant modifier banner — liquid systems only */}
         {!sysCfg?.isPowder&&plantModMeta?.mods&&plantMod&&(
@@ -1310,169 +1362,36 @@ export default function FloraApp() {
           </div>
         )}
 
-        {/* Base nutrients — liquid systems only */}
-        {!sysCfg?.isPowder&&(isFlush?(
-          <div style={{background:GH.card,border:`1px solid ${GH.border}`,padding:"24px",textAlign:"center",marginBottom:12}}>
-            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,color:GH.muted,letterSpacing:"0.2em",marginBottom:8}}>FLUSH — BASE NUTRIENTS NOT USED</div>
-            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,color:GH.green}}>FLORAKLEEN</div>
-            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:48,fontWeight:900,color:GH.text,lineHeight:1}}>{+(10*gallons).toFixed(1)}<span style={{fontSize:20,color:GH.muted,fontWeight:400}}> ml</span></div>
-            <div style={{fontSize:12,color:GH.dim,fontFamily:"'DM Sans',sans-serif",marginTop:4}}>10 ml/gal · {volume} {unit}</div>
-          </div>
-        ):(
-          <>
-            <div style={sectionLabel()}>BASE NUTRIENTS</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
-              {["micro","gro","bloom"].map(k=>{
-                const b=BOTTLE[k],d=core[k];
-                const pct=(d.ml/Math.max(core.micro.ml,core.gro.ml,core.bloom.ml,1))*100;
-                return (
-                  <div key={k} style={{background:"#f0f0f0",border:`1px solid ${b.accent}44`,padding:"16px 12px",textAlign:"center",position:"relative",overflow:"hidden"}}>
-                    <div style={{position:"absolute",bottom:0,left:0,right:0,height:3,background:`linear-gradient(90deg,transparent,${b.accent},transparent)`,opacity:pct/100*0.8+0.2}}/>
-                    <div style={{position:"absolute",bottom:3,left:0,height:`${pct}%`,width:3,background:b.accent,opacity:0.5,maxHeight:"80%"}}/>
-                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:9,fontWeight:700,color:b.accent,letterSpacing:"0.2em",textTransform:"uppercase",marginBottom:4}}>{b.sub}</div>
-                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,fontWeight:800,color:b.accent,marginBottom:10,textTransform:"uppercase"}}>{b.label}</div>
-                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:36,fontWeight:900,color:GH.text,lineHeight:1}}>{d.ml}</div>
-                    <div style={{fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif",marginTop:2}}>ml</div>
-                    <div style={{fontSize:11,color:GH.muted,fontFamily:"'DM Sans',sans-serif",marginTop:4}}>{d.tsp} tsp</div>
-                    {d.ml===0&&<div style={{fontSize:10,color:GH.dim,fontStyle:"italic",marginTop:4}}>—</div>}
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        ))}
-
-        {/* FloraPro Powder — products */}
-        {sysCfg?.isPowder&&(
-          <>
-            <div style={sectionLabel()}>{sysCfg.baseLabel||"POWDER FEED PROGRAM — STOCK SOLUTION"}</div>
-            <div style={ghAlert(sysCfg.color)}>{sysCfg.baseLabel?.includes("BIOTHRIVE")?"Doses are TOTAL amounts for your reservoir. Grow and Bloom are grams — weigh out the exact amount shown. CaMg+ and supplements are ml — measure by volume. Dissolve granular products fully before adding others.":sysCfg.baseLabel?.includes("MAXI")?"Doses are TOTAL amounts for your reservoir. MaxiGro and MaxiBloom are grams — weigh out the exact amount shown and dissolve directly in your reservoir water. CALiMAGic is ml — measure by volume.":sysCfg.baseLabel?.includes("FLORANOVA")?"FloraNova Grow and Bloom are liquid concentrates (ml/gal). Use Grow during vegetative stages and Bloom during flowering — never both at the same time.":"Doses are ml/gal of 1 lb/gal concentrated stock solution. Prepare each product separately, then inject per the mixing order below. A mixing chamber between Ca+Micros and other inputs is strongly recommended."}</div>
-            {sysCfg.includedKeys.map(key=>{
-              const meta=INCL_META[key],d=included[key];
-              if(!meta||!d)return null;
-              const isZero=d.ml<=0;
-              return (
-                <div key={key} style={{display:"flex",alignItems:"center",gap:12,marginBottom:6,padding:"14px 16px",background:isZero?GH.card:`${meta.color}10`,border:`1px solid ${isZero?GH.border:meta.color+"44"}`,opacity:isZero?0.4:1,position:"relative"}}>
-                  {!isZero&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:3,background:meta.color}}/>}
-                  <span style={{fontSize:20,flexShrink:0,paddingLeft:!isZero?4:0}}>{meta.icon}</span>
-                  <div style={{flex:1}}>
-                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:15,fontWeight:700,color:isZero?GH.dim:meta.color,textTransform:"uppercase",letterSpacing:"0.04em"}}>{meta.name}</div>
-                    <div style={{fontSize:10,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}>{meta.brand}</div>
-                    {meta.powderNote&&d.ml>0&&<div style={{fontSize:10,color:GH.muted,fontFamily:"'DM Sans',sans-serif",marginTop:2,fontStyle:"italic"}}>{meta.powderNote}</div>}
-                  </div>
-                  {d.ml>0?(
-                    <div style={{textAlign:"right"}}>
-                      <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,color:meta.color}}>{d.ml}</span>
-                      <span style={{fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}> {d.unit||"ml"}</span>
-                      {d.unit==="g"
-                        ? <div style={{fontSize:10,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}>for {volume} {unit}</div>
-                        : meta.isPowder
-                          ? <div style={{fontSize:10,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}>stock sol. total</div>
-                          : <div style={{fontSize:10,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}>{d.tsp} tsp</div>
-                      }
-                    </div>
-                  ):(
-                    <div style={{fontSize:11,color:GH.dim,fontStyle:"italic",fontFamily:"'DM Sans',sans-serif"}}>Not this stage</div>
-                  )}
-                </div>
-              );
-            })}
-          </>
-        )}
-
-        {/* Liquid system included products */}
-        {!sysCfg?.isPowder&&!isFlush&&sysCfg?.includedKeys.length>0&&(
-          <>
-            <div style={sectionLabel()}>{sysCfg.name.toUpperCase()} — SYSTEM PRODUCTS</div>
-            {sysCfg.includedKeys.map(key=>{
-              const meta=INCL_META[key],d=included[key];
-              if(!meta||!d)return null;
-              const isZero=d.ml<=0;
-              return (
-                <div key={key} style={{display:"flex",alignItems:"center",gap:12,marginBottom:6,padding:"14px 16px",background:isZero?GH.card:`${meta.color}10`,border:`1px solid ${isZero?GH.border:meta.color+"44"}`,opacity:isZero?0.4:1,position:"relative"}}>
-                  {!isZero&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:3,background:meta.color}}/>}
-                  <span style={{fontSize:20,flexShrink:0,paddingLeft:!isZero?4:0}}>{meta.icon}</span>
-                  <div style={{flex:1}}>
-                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:15,fontWeight:700,color:isZero?GH.dim:GH.text,textTransform:"uppercase",letterSpacing:"0.04em"}}>{meta.name}</div>
-                    <div style={{fontSize:10,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}>{meta.brand}</div>
-                    {meta.waterAdjust&&water==="tap"&&d.ml>0&&<div style={{fontSize:10,color:GH.orange,fontFamily:"'DM Sans',sans-serif",marginTop:2}}>−50% tap water adjustment applied</div>}
-                    {meta.waterAdjust&&water==="ro"&&d.ml>0&&<div style={{fontSize:10,color:GH.blue,fontFamily:"'DM Sans',sans-serif",marginTop:2}}>+25% RO boost applied</div>}
-                  </div>
-                  {d.ml>0?(
-                    <div style={{textAlign:"right"}}>
-                      <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,color:meta.color}}>{d.ml}</span>
-                      <span style={{fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}> ml</span>
-                      <div style={{fontSize:10,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}>{d.tsp} tsp</div>
-                    </div>
-                  ):(
-                    <div style={{fontSize:11,color:GH.dim,fontStyle:"italic",fontFamily:"'DM Sans',sans-serif"}}>Not this stage</div>
-                  )}
-                </div>
-              );
-            })}
-          </>
-        )}
-
-        {/* Optional active supplements */}
-        {supps.size>0&&(
-          <>
-            <div style={sectionLabel()}>OPTIONAL SUPPLEMENTS</div>
-            {suppData.filter(s=>s.active).map(s=>{
-              const meta=CAT_META[s.category];
-              return (
-                <div key={s.id} style={{display:"flex",alignItems:"center",gap:12,marginBottom:6,padding:"14px 16px",background:`${meta.color}10`,border:`1px solid ${meta.color}44`,position:"relative"}}>
-                  <div style={{position:"absolute",left:0,top:0,bottom:0,width:3,background:meta.color}}/>
-                  <span style={{fontSize:20,paddingLeft:4}}>{meta.icon}</span>
-                  <div style={{flex:1}}>
-                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:15,fontWeight:700,color:GH.text,textTransform:"uppercase",letterSpacing:"0.04em"}}>{s.name}</div>
-                    {s.dose?.note&&<div style={{fontSize:10,color:GH.orange,fontFamily:"'DM Sans',sans-serif",marginTop:2}}>{s.dose.note}</div>}
-                  </div>
-                  {s.dose&&<div style={{textAlign:"right"}}><span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,color:meta.color}}>{s.dose.ml}</span><span style={{fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}> {s.dose.unit}</span><div style={{fontSize:10,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}>{s.dose.tsp} tsp</div></div>}
-                </div>
-              );
-            })}
-          </>
-        )}
-
-        {/* Mixing order */}
+        {/* Mixing Order — always visible, styled like supplement rows */}
         <div style={{marginBottom:12}}>
-          <button onClick={()=>setShowMix(v=>!v)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"14px 16px",background:GH.card,border:`1px solid ${GH.border}`,cursor:"pointer",textAlign:"left"}}>
-            <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,fontWeight:700,color:GH.muted,letterSpacing:"0.1em",flex:1}}>MIXING ORDER GUIDE</span>
-            <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,color:GH.orange,fontWeight:700}}>{mixSteps.length} PRODUCTS</span>
-            <span style={{color:GH.dim,fontSize:12,marginLeft:8}}>{showMix?"▲":"▼"}</span>
-          </button>
-          {showMix&&(
-            <div style={{background:"#f0f0f0",border:`1px solid ${GH.border}`,borderTop:"none",padding:"16px"}}>
-              <div style={{fontSize:11,color:GH.dim,marginBottom:16,fontFamily:"'DM Sans',sans-serif",fontStyle:"italic"}}>Add to reservoir in this exact order. Never combine concentrates directly.</div>
-              {mixSteps.map((s,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:14}}>
-                  <div style={{width:28,height:28,background:s.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>
-                    <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,fontWeight:900,color:"#000"}}>{i+1}</span>
-                  </div>
-                  <div style={{flex:1}}>
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                      <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:15,fontWeight:700,color:s.color,textTransform:"uppercase",letterSpacing:"0.04em"}}>{s.label}</span>
-                        {s.tag==="system"&&<span style={{fontSize:9,color:s.color,background:`${s.color}18`,border:`1px solid ${s.color}33`,padding:"1px 6px",fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,letterSpacing:"0.1em"}}>SYSTEM</span>}
-                        {s.tag==="base"&&<span style={{fontSize:9,color:s.color,background:`${s.color}18`,border:`1px solid ${s.color}33`,padding:"1px 6px",fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,letterSpacing:"0.1em"}}>BASE</span>}
-                      </div>
-                      <div style={{textAlign:"right"}}>
-                        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:800,color:GH.text}}>{s.dose.ml} <span style={{fontSize:11,color:GH.dim,fontWeight:400}}>{s.dose.unit||"ml"}</span></span>
-                        {s.dose.unit==="g"&&<div style={{fontSize:9,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}>weigh out</div>}
-                        {(!s.dose.unit||s.dose.unit==="ml")&&s.dose.tsp>0&&<div style={{fontSize:9,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}>{s.dose.tsp} tsp</div>}
-                      </div>
-                    </div>
-                    {s.note&&<div style={{fontSize:10,color:GH.dim,fontStyle:"italic",marginTop:2,fontFamily:"'DM Sans',sans-serif"}}>{s.note}</div>}
-                    {s.warn&&<div style={{marginTop:6,fontSize:11,color:GH.orange,background:"rgba(247,148,29,0.08)",border:"1px solid rgba(247,148,29,0.25)",padding:"6px 10px",fontFamily:"'DM Sans',sans-serif"}}>⚠ {s.warn}</div>}
-                  </div>
-                </div>
-              ))}
-              <div style={{marginTop:12,paddingTop:14,borderTop:`1px solid ${GH.border}`,fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif",lineHeight:2}}>
-                CHECK pH AFTER MIXING:<br/>
-                <span style={{color:GH.green,fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:13}}>5.5–6.5</span> hydroponics &nbsp;·&nbsp; <span style={{color:GH.green,fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:13}}>6.0–7.0</span> soil/coco
+          <div style={sectionLabel()}>MIXING ORDER</div>
+          <div style={{fontSize:11,color:GH.dim,marginBottom:12,fontFamily:"'DM Sans',sans-serif",fontStyle:"italic"}}>Add to reservoir in this exact order. Never combine concentrates directly.</div>
+          {mixSteps.map((s,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:12,marginBottom:6,padding:"14px 16px",background:`${s.color}10`,border:`1px solid ${s.color}44`,position:"relative"}}>
+              <div style={{position:"absolute",left:0,top:0,bottom:0,width:4,background:s.color}}/>
+              <div style={{width:24,height:24,background:s.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginLeft:4}}>
+                <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,fontWeight:900,color:"#fff"}}>{i+1}</span>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:15,fontWeight:700,color:s.color,textTransform:"uppercase",letterSpacing:"0.04em"}}>{s.label}</div>
+                {s.note&&<div style={{fontSize:10,color:GH.dim,fontStyle:"italic",marginTop:2,fontFamily:"'DM Sans',sans-serif"}}>{s.note}</div>}
+                {s.warn&&<div style={{marginTop:4,fontSize:11,color:GH.orange,fontFamily:"'DM Sans',sans-serif"}}>⚠ {s.warn}</div>}
+              </div>
+              <div style={{textAlign:"right",flexShrink:0}}>
+                <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,color:s.color}}>{s.dose.ml}</span>
+                <span style={{fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}> {s.dose.unit||"ml"}</span>
+                {s.dose.unit==="g"&&<div style={{fontSize:9,color:GH.dim,fontFamily:"'DM Sans',sans-serif"}}>weigh out</div>}
               </div>
             </div>
-          )}
+          ))}
+          <div style={{marginTop:10,padding:"12px 16px",background:GH.card,border:`1px solid ${GH.border}`,fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif",lineHeight:1.8}}>
+            CHECK pH AFTER MIXING: &nbsp;
+            {substrate==="hydro"&&<><span style={{color:GH.green,fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:13}}>5.5–6.5</span> <span style={{color:GH.dim}}>— Hydroponics</span></>}
+            {substrate==="inert"&&<><span style={{color:GH.green,fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:13}}>5.8–6.2</span> <span style={{color:GH.dim}}>— Coco / Inert medium</span></>}
+            {substrate==="potting"&&<><span style={{color:GH.green,fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:13}}>6.0–6.8</span> <span style={{color:GH.dim}}>— Potting soil</span></>}
+            {substrate==="soil"&&<><span style={{color:GH.green,fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:13}}>6.0–7.0</span> <span style={{color:GH.dim}}>— Ground soil</span></>}
+            {!substrate&&<><span style={{color:GH.green,fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:13}}>5.5–6.5</span> hydro &nbsp;·&nbsp; <span style={{color:GH.green,fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:13}}>6.0–7.0</span> soil</>}
+          </div>
         </div>
 
       </div>
