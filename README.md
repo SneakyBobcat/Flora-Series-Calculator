@@ -15,30 +15,29 @@ Mobile-first Progressive Web App for General Hydroponics nutrient systems.
 ## Features
 
 - 9-step wizard: Medium → Brand → System → Plant → Photoperiod → Stage → Settings → Supplements → Results
-- Substrate-aware dosing — Hydroponics / Inert / Potting Soil / Ground Soil with automatic dose reduction
-- 10 supported crops with individual EC ceilings and dose adjustments (Classic systems)
+- Substrate-aware dosing — Hydroponics / Inert / Potting Soil / Ground Soil
 - Plant modifier toggle on Classic brand — enable/disable crop-specific dose adjustments
 - Water source calibration — Tap, Soft, RO/DI
 - Light / Medium / Aggressive feed strength tiers
 - EC budget with per-plant ceiling alerts
-- Optional supplement recommendations by plant type and stage (8 categories, collapsible)
-- Always-visible mixing order guide with numbered product rows
+- Optional supplement recommendations (8 categories)
+- Always-visible mixing order with numbered product rows
 - Direct gram totals for dry concentrate systems
 - Substrate-specific pH targets
 
 ---
 
-## Deploy to Netlify (free, ~5 minutes)
+## Deploy to Netlify
 
 ### 1 — Push to GitHub
-1. Create a repo at **github.com** (e.g. `gh-nutrient-calculator`)
+1. Create a repo at **github.com**
 2. Upload all files from this folder into the repo
 
 ### 2 — Deploy on Netlify
-1. Sign up at **netlify.com** with your GitHub account
+1. Sign in at **netlify.com** with GitHub
 2. **Add new site → Import an existing project → GitHub**
-3. Select your repo — build settings auto-read from `netlify.toml`
-4. Click **Deploy** — live in ~60 seconds
+3. Select your repo — `netlify.toml` handles build settings automatically
+4. Click **Deploy**
 
 ---
 
@@ -56,7 +55,6 @@ Mobile-first Progressive Web App for General Hydroponics nutrient systems.
 npm install
 npm run dev       # http://localhost:5173
 npm run build     # production build → /dist
-npm run preview   # preview production build
 ```
 
 ---

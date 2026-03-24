@@ -943,18 +943,16 @@ export default function FloraApp() {
             </div>
             {brand==="classic"&&<div style={{width:4,background:GH.green,flexShrink:0}}/>}
           </button>
-          {brand==="classic"&&(
-            <div style={{borderTop:`1px solid ${GH.green}33`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
-              <div>
-                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,fontWeight:700,color:GH.green,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:2}}>Plant Modifiers</div>
-                <div style={{fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}}>Adjusts doses for your specific crop — e.g. cannabis gets more nitrogen, orchids get less.</div>
-              </div>
-              <button onClick={e=>{e.stopPropagation();setUsePlantMod(v=>!v);}}
-                style={{flexShrink:0,width:44,height:24,borderRadius:12,background:usePlantMod?GH.green:"#ccc",border:"none",cursor:"pointer",position:"relative",transition:"background 0.2s"}}>
-                <div style={{position:"absolute",top:3,left:usePlantMod?22:3,width:18,height:18,borderRadius:9,background:"#fff",transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
-              </button>
+          <div style={{borderTop:`1px solid ${GH.green}33`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+            <div>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,fontWeight:700,color:GH.green,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:2}}>Plant Modifiers</div>
+              <div style={{fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}}>Adjusts doses for your specific crop — e.g. cannabis gets more nitrogen, orchids get less.</div>
             </div>
-          )}
+            <button onClick={e=>{e.stopPropagation();setUsePlantMod(v=>!v);}}
+              style={{flexShrink:0,width:44,height:24,borderRadius:12,background:usePlantMod?GH.green:"#ccc",border:"none",cursor:"pointer",position:"relative",transition:"background 0.2s"}}>
+              <div style={{position:"absolute",top:3,left:usePlantMod?22:3,width:18,height:18,borderRadius:9,background:"#fff",transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
+            </button>
+          </div>
         </div>
 
         {/* FloraPro */}
