@@ -22,7 +22,6 @@ Mobile-first Progressive Web App for General Hydroponics nutrient systems.
 - Optional supplement recommendations by plant type and stage (8 categories, collapsible)
 - Mixing order guide for every product combination
 - Direct gram totals for dry concentrate systems — no stock-solution math required
-- Save & load runs with persistent storage
 
 ---
 

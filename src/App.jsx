@@ -1475,27 +1475,6 @@ export default function FloraApp() {
           )}
         </div>
 
-        {/* Save run */}
-        <div style={{marginBottom:24}}>
-          {!savePrompt?(
-            <button onClick={()=>{setSavePrompt(true);setSaveName(`${plantObj.icon} ${plantObj.name} · ${stageObj.label} · ${volume} ${unit}`);}}
-              style={{width:"100%",padding:"16px",background:"none",border:`1px solid ${GH.green}`,color:GH.green,fontFamily:"'Barlow Condensed',sans-serif",fontSize:16,fontWeight:700,letterSpacing:"0.1em",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,transition:"all 0.15s"}}>
-              <span>💾</span> SAVE THIS RUN
-            </button>
-          ):(
-            <div style={{background:GH.card,border:`1px solid ${GH.border}`,padding:"18px"}}>
-              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,color:GH.muted,letterSpacing:"0.15em",marginBottom:12}}>NAME THIS RUN</div>
-              <input value={saveName} onChange={e=>setSaveName(e.target.value)} placeholder="e.g. Tent A – Week 6"
-                style={{width:"100%",background:"#f0f0f0",border:`1px solid ${GH.border}`,padding:"12px 14px",color:GH.text,fontFamily:"'DM Sans',sans-serif",fontSize:14,outline:"none",marginBottom:12}}/>
-              <div style={{display:"flex",gap:8}}>
-                <button onClick={handleSave} style={{...ghPrimaryBtn(),flex:1,marginTop:0,padding:"13px"}}>SAVE</button>
-                <button onClick={()=>{setSavePrompt(false);setSaveName("");}} style={{padding:"13px 20px",background:"none",border:`1px solid ${GH.border}`,color:GH.muted,fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,fontWeight:700,letterSpacing:"0.08em",cursor:"pointer"}}>CANCEL</button>
-              </div>
-            </div>
-          )}
-          {saveStatus==="saved"&&<div style={{marginTop:8,textAlign:"center",fontSize:12,color:GH.green,fontFamily:"'DM Sans',sans-serif"}}>✓ Run saved — find it on the System page</div>}
-          {saveStatus==="error"&&<div style={{marginTop:8,textAlign:"center",fontSize:12,color:"#e05050",fontFamily:"'DM Sans',sans-serif"}}>Failed to save. Try again.</div>}
-        </div>
       </div>
     );
   };
@@ -1546,7 +1525,7 @@ export default function FloraApp() {
           {steps.map((label,i)=>{
             const active=step===i,done=i<step;
             return (
-              <button key={i} onClick={()=>goTo(i)} style={{flex:"1 0 0",minWidth:0,padding:"12px 2px",background:"none",border:"none",borderBottom:`2px solid ${active?"#78BE20":"transparent"}`,color:active?"#78BE20":done?"#555":"#bbb",cursor:"pointer",fontFamily:"'Barlow Condensed',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",transition:"all 0.2s",whiteSpace:"nowrap"}}>
+              <button key={i} onClick={()=>goTo(i)} style={{flex:"1 0 0",minWidth:0,padding:"12px 2px",background:"none",border:"none",borderBottom:`2px solid ${active?"#78BE20":"transparent"}`,color:active?"#78BE20":done?"#555":"#bbb",cursor:"pointer",fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",transition:"all 0.2s",whiteSpace:"nowrap"}}>
                 {done?"✓ ":""}{label}
               </button>
             );
