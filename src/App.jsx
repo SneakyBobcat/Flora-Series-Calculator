@@ -2,88 +2,67 @@ import { useState, useMemo, useEffect } from "react";
 
 // ─── STAGE METADATA ──────────────────────────────────────────────────────────
 const STAGE_META = {
-  seedling:      { label:"Seedling / Clone",    color:"#78BE20", desc:"Fixed low-EC dose" },
-  early_growth:  { label:"Early Growth (18H)",  color:"#78BE20", desc:"Vegetative · 18-hr photoperiod" },
-  late_growth:   { label:"Late Growth (18H)",   color:"#5a9a10", desc:"Peak vegetative push" },
-  early_bloom:   { label:"Early Bloom (12H)",   color:"#e8c045", desc:"Flip · flower sites forming" },
-  mid_late_bloom:{ label:"Mid-Late Bloom (12H)",color:"#e07a3a", desc:"Peak flower · swelling · finish" },
-  mid_bloom:     { label:"Mid Bloom (12H)",     color:"#e09040", desc:"Peak flowering · building" },
-  late_bloom:    { label:"Late Bloom (12H)",    color:"#d06030", desc:"Swell · finish · pre-harvest" },
-  ripen:         { label:"Ripen",               color:"#c05a8a", desc:"Ripening agent · final weeks" },
-  flush:         { label:"Flush",               color:"#888",    desc:"FloraKleen only" },
-  // ── FloraPro Powder stages ──
-  fp_propagation:{ label:"Propagation",         color:"#78BE20", desc:"Seedling & clone establishment" },
-  fp_vegetative: { label:"Vegetative",          color:"#5a9a10", desc:"Active vegetative growth" },
-  fp_early_flower:{ label:"Early Flower",       color:"#e8c045", desc:"Flower initiation" },
-  fp_mid_flower: { label:"Mid Flower",          color:"#e07a3a", desc:"Peak flower development" },
-  fp_late_flower:{ label:"Late Flower",         color:"#d06030", desc:"Ripening & swell" },
-  fp_finish:     { label:"Finish",              color:"#888",    desc:"Final harvest flush" },
-  // ── BioThrive stages ──
-  bt_bloom:           { label:"Bloom (12H)",            color:"#d06030", desc:"Peak flower · building density" },
-  // ── MaxiSeries stages ──
-  mx_early_mid_bloom: { label:"Early-Mid Bloom (12H)",  color:"#e07a3a", desc:"Flower initiation through peak" },
-  mx_late_bloom_ripen:{ label:"Late Bloom-Ripen (12H)", color:"#c05a8a", desc:"Swell · finish · pre-harvest" },
-  mx_growth:          { label:"Growth (18H)",            color:"#78BE20", desc:"Outdoor vegetative growth" },
-  mx_bloom:           { label:"Bloom (12H)",             color:"#e07a3a", desc:"Outdoor flowering & fruiting" },
+  seedling:     { label:"Seedling / Clone", color:"#78BE20", desc:"Establishment phase · low EC · fixed dose" },
+  early_growth: { label:"Early Growth",    color:"#78BE20", desc:"Active vegetative growth" },
+  late_growth:  { label:"Late Growth",     color:"#5a9a10", desc:"Peak vegetative push" },
+  early_flower: { label:"Early Flower",    color:"#e8c045", desc:"Flower initiation · sites forming" },
+  late_flower:  { label:"Late Flower",     color:"#d06030", desc:"Peak flower · swell · ripen" },
+  flush:        { label:"Flush",           color:"#888",    desc:"Flush only — no nutrients" },
 };
 
-const FP_ALL   = ["fp_propagation","fp_vegetative","fp_early_flower","fp_mid_flower","fp_late_flower","fp_finish"];
-const FP_VEG   = ["fp_propagation","fp_vegetative","fp_finish"];
-const FP_BERRY = ["fp_propagation","fp_vegetative","fp_early_flower","fp_mid_flower","fp_late_flower","fp_finish"];
-const BT_ALL   = ["early_growth","late_growth","early_bloom","bt_bloom"];
-const BT_VEG   = ["early_growth","late_growth"];
-const MX_ALL   = ["early_growth","late_growth","mx_early_mid_bloom","mx_late_bloom_ripen"];
-const MX_VEG   = ["early_growth","late_growth"];
-const MX_OUT   = ["mx_growth","mx_bloom"];
-const MX_OUT_VEG = ["mx_growth"];
+// Universal stage set — all systems use these same 6 stage IDs
+const ALL_STAGES     = ["seedling","early_growth","late_growth","early_flower","late_flower","flush"];
+const VEG_ONLY       = ["seedling","early_growth","late_growth","flush"];
+const FLOWER_NO_SEED = ["early_growth","late_growth","early_flower","late_flower","flush"];
+const NO_SEED_NO_FLUSH = ["early_growth","late_growth","early_flower","late_flower"];
 
 const PLANTS = [
-  { id:"tomatoes",     name:"Tomatoes",        icon:"🍅", maxStages:["seedling","early_growth","late_growth","early_bloom","mid_bloom","mid_late_bloom","late_bloom","ripen","flush",...FP_ALL,...BT_ALL,...MX_ALL,...MX_OUT] },
-  { id:"cannabis",     name:"Cannabis / Hemp", icon:"🌿", maxStages:["seedling","early_growth","late_growth","early_bloom","mid_bloom","mid_late_bloom","late_bloom","ripen","flush",...FP_ALL,...BT_ALL,...MX_ALL,...MX_OUT] },
-  { id:"peppers",      name:"Peppers",         icon:"🌶️", maxStages:["seedling","early_growth","late_growth","early_bloom","mid_bloom","mid_late_bloom","late_bloom","ripen","flush",...FP_ALL,...BT_ALL,...MX_ALL,...MX_OUT] },
-  { id:"cucumbers",    name:"Cucumbers",       icon:"🥒", maxStages:["seedling","early_growth","late_growth","early_bloom","mid_bloom","mid_late_bloom","late_bloom","ripen","flush",...FP_ALL,...BT_ALL,...MX_ALL,...MX_OUT] },
-  { id:"lettuce",      name:"Lettuce / Greens",icon:"🥬", maxStages:["seedling","early_growth","late_growth","flush",...FP_VEG,...BT_VEG,...MX_VEG,...MX_OUT_VEG] },
-  { id:"herbs",        name:"Herbs & Basil",   icon:"🌱", maxStages:["seedling","early_growth","late_growth","flush",...FP_VEG,...BT_VEG,...MX_VEG,...MX_OUT_VEG] },
-  { id:"strawberries", name:"Strawberries",    icon:"🍓", maxStages:["seedling","early_growth","early_bloom","mid_bloom","mid_late_bloom","late_bloom","flush",...FP_BERRY,...BT_ALL,...MX_ALL,...MX_OUT] },
-  { id:"roses",        name:"Roses",           icon:"🌹", maxStages:["seedling","early_growth","late_growth","early_bloom","mid_bloom","mid_late_bloom","late_bloom",...FP_ALL,...BT_ALL,...MX_ALL,...MX_OUT] },
-  { id:"orchids",      name:"Orchids",         icon:"🌸", maxStages:["seedling","early_growth","early_bloom","mid_bloom","mid_late_bloom","late_bloom",...FP_BERRY,...BT_ALL,...MX_ALL,...MX_OUT] },
-  { id:"houseplants",  name:"Houseplants",     icon:"🪴", maxStages:["seedling","early_growth","late_growth",...FP_VEG,...BT_VEG,...MX_VEG,...MX_OUT_VEG] },
+  { id:"tomatoes",     name:"Tomatoes",        icon:"🍅", maxStages:[...ALL_STAGES] },
+  { id:"cannabis",     name:"Cannabis / Hemp", icon:"🌿", maxStages:[...ALL_STAGES] },
+  { id:"peppers",      name:"Peppers",         icon:"🌶️", maxStages:[...ALL_STAGES] },
+  { id:"cucumbers",    name:"Cucumbers",       icon:"🥒", maxStages:[...ALL_STAGES] },
+  { id:"lettuce",      name:"Lettuce / Greens",icon:"🥬", maxStages:[...VEG_ONLY] },
+  { id:"herbs",        name:"Herbs & Basil",   icon:"🌱", maxStages:[...VEG_ONLY] },
+  { id:"strawberries", name:"Strawberries",    icon:"🍓", maxStages:[...ALL_STAGES] },
+  { id:"roses",        name:"Roses",           icon:"🌹", maxStages:[...NO_SEED_NO_FLUSH] },
+  { id:"orchids",      name:"Orchids",         icon:"🌸", maxStages:[...NO_SEED_NO_FLUSH] },
+  { id:"houseplants",  name:"Houseplants",     icon:"🪴", maxStages:[...VEG_ONLY] },
 ];
 
 const SYSTEM_CONFIGS = {
   "3part": {
-    id:"3part", name:"Classic 3-Part", parts:3, color:"#78BE20",
+    id:"3part", name:"3-Part Classic", parts:3, color:"#78BE20",
     tagline:"FloraMicro · FloraGro · FloraBloom",
     desc:"Clean, versatile foundation for all grow styles.",
-    stages:["seedling","early_growth","late_growth","early_bloom","mid_late_bloom","flush"],
+    stages:["seedling","early_growth","late_growth","early_flower","late_flower","flush"],
     includedKeys:[],
   },
   "6part": {
     id:"6part", name:"6-Part Advanced", parts:6, color:"#00AEEF",
     tagline:"3-Part + CALiMAGiC · Floralicious Plus · Liquid KoolBloom",
     desc:"Enhanced Ca/Mg support and organic bloom performance.",
-    stages:["early_growth","late_growth","early_bloom","mid_late_bloom","flush"],
+    stages:["early_growth","late_growth","early_flower","late_flower","flush"],
     includedKeys:["calimagic","floralicious","koolbloom"],
   },
   "10part": {
     id:"10part", name:"10-Part Professional", parts:10, color:"#F7941D",
     tagline:"6-Part + RapidStart · Ripen · Armor Si · FloraKleen",
     desc:"Maximum yield system with root stimulation and ripening.",
-    stages:["early_growth","late_growth","early_bloom","mid_bloom","late_bloom","ripen","flush"],
+    stages:["early_growth","late_growth","early_flower","late_flower","flush"],
     includedKeys:["calimagic","floralicious","koolbloom","rapidstart","ripen_p","armorsi"],
   },
   "florapro_std": {
     id:"florapro_std", name:"FloraPro Standard", parts:"PWD", color:"#1B9E78", isPowder:true,
     tagline:"Ca+Micros · Grow · Bloom · Late Bloom",
     desc:"Powder concentrate program for commercial & high-performance grows. Standard EC.",
-    stages:["fp_propagation","fp_vegetative","fp_early_flower","fp_mid_flower","fp_late_flower","fp_finish"],
+    stages:["seedling","early_growth","late_growth","early_flower","late_flower","flush"],
     includedKeys:["fp_ca_micros","fp_grow","fp_bloom","fp_late_bloom"],
   },
   "florapro_highec": {
     id:"florapro_highec", name:"FloraPro High EC", parts:"PWD", color:"#7B4FA8", isPowder:true,
     tagline:"Ca+Micros · Grow · Bloom · Late Bloom",
     desc:"Powder concentrate program optimized for high EC environments and maximum production.",
-    stages:["fp_propagation","fp_vegetative","fp_early_flower","fp_mid_flower","fp_late_flower","fp_finish"],
+    stages:["seedling","early_growth","late_growth","early_flower","late_flower","flush"],
     includedKeys:["fp_ca_micros","fp_grow","fp_bloom","fp_late_bloom"],
   },
   "biothrive_basic": {
@@ -91,7 +70,7 @@ const SYSTEM_CONFIGS = {
     baseLabel:"BIOTHRIVE 2-PART NUTRIENT PROGRAM",
     tagline:"BioThrive Grow · BioThrive Bloom · CaMg+",
     desc:"Professional 2-part organic-based system. Grow for veg, Bloom for flower — CaMg+ throughout.",
-    stages:["early_growth","late_growth","early_bloom","bt_bloom"],
+    stages:["early_growth","late_growth","early_flower","late_flower"],
     includedKeys:["bt_grow","bt_bloom_p","bt_camg"],
   },
   "biothrive_custom": {
@@ -99,7 +78,7 @@ const SYSTEM_CONFIGS = {
     baseLabel:"BIOTHRIVE 7-PART NUTRIENT PROGRAM",
     tagline:"2-Part Base + BioRoot · BioWeed · BioBud · BioMarine · Diamond Black",
     desc:"Professional 7-part system with targeted supplements for maximum yield and quality.",
-    stages:["early_growth","late_growth","early_bloom","bt_bloom"],
+    stages:["early_growth","late_growth","early_flower","late_flower"],
     includedKeys:["bt_grow","bt_bloom_p","bt_camg","bt_bioroot","bt_bioweed","bt_biobud","bt_biomarine","bt_diamond"],
   },
   "maxi_indoor": {
@@ -107,7 +86,7 @@ const SYSTEM_CONFIGS = {
     baseLabel:"MAXI SERIES 2-PART INDOOR SYSTEM",
     tagline:"MaxiGro · MaxiBloom · CALiMAGic",
     desc:"Professional 2-part dry concentrate system with full strength tiers for indoor grows.",
-    stages:["early_growth","late_growth","mx_early_mid_bloom","mx_late_bloom_ripen"],
+    stages:["early_growth","late_growth","early_flower","late_flower"],
     includedKeys:["mx_gro","mx_bloom_p","mx_calmag"],
   },
   "maxi_outdoor": {
@@ -115,7 +94,7 @@ const SYSTEM_CONFIGS = {
     baseLabel:"MAXI SERIES 1-PART OUTDOOR SYSTEM",
     tagline:"MaxiGro · MaxiBloom",
     desc:"Simple 1-part dry concentrate system designed for outdoor growing conditions.",
-    stages:["mx_growth","mx_bloom"],
+    stages:["early_growth","early_flower"],
     includedKeys:["mx_gro","mx_bloom_p"],
   },
   "floranvoa_1part": {
@@ -123,7 +102,7 @@ const SYSTEM_CONFIGS = {
     baseLabel:"FLORANOVA 1-PART NUTRIENT SYSTEM",
     tagline:"FloraNova Grow · FloraNova Bloom",
     desc:"Breakthrough liquid formula with dry-concentrate strength. One product per stage — simple and powerful.",
-    stages:["early_growth","late_growth","early_bloom","mid_bloom"],
+    stages:["early_growth","late_growth","early_flower","late_flower"],
     includedKeys:["fn_grow","fn_bloom"],
   },
   "floranvoa_4part": {
@@ -131,7 +110,7 @@ const SYSTEM_CONFIGS = {
     baseLabel:"FLORANOVA 4-PART NUTRIENT SYSTEM",
     tagline:"FloraNova Grow · Bloom + CALiMAGic · Floralicious Plus · Liquid KoolBloom",
     desc:"FloraNova base with Pro Performance Pack for enhanced Ca/Mg, plant vitality, and bloom production.",
-    stages:["early_growth","late_growth","early_bloom","mid_bloom"],
+    stages:["early_growth","late_growth","early_flower","late_flower"],
     includedKeys:["fn_grow","fn_bloom","calimagic","floralicious","koolbloom"],
   },
   "floranvoa_8part": {
@@ -139,7 +118,7 @@ const SYSTEM_CONFIGS = {
     baseLabel:"FLORANOVA 8-PART NUTRIENT SYSTEM",
     tagline:"FloraNova + Pro Performance Pack + RapidStart · Ripen · Armor Si · FloraKleen",
     desc:"Full custom performance system with root stimulation, ripening agents, and silica for maximum yield.",
-    stages:["early_growth","late_growth","early_bloom","mid_bloom","late_bloom","ripen","flush"],
+    stages:["early_growth","late_growth","early_flower","late_flower","flush"],
     includedKeys:["fn_grow","fn_bloom","calimagic","floralicious","koolbloom","rapidstart","ripen_p","armorsi"],
   },
 };
@@ -161,99 +140,95 @@ const SYSTEM_EXCLUDED_SUPPS = {
 
 const SCHEDULES = {
   "3part": {
-    seedling:      { light:{micro:1.3,gro:1.3,bloom:0},      medium:{micro:1.3,gro:1.3,bloom:0},      aggressive:{micro:1.3,gro:1.3,bloom:0},      seedlingFixed:true },
-    early_growth:  { light:{micro:3.6,gro:3.4,bloom:2.6},    medium:{micro:4.2,gro:3.8,bloom:3.0},    aggressive:{micro:5.2,gro:4.8,bloom:3.7} },
-    late_growth:   { light:{micro:6.0,gro:5.6,bloom:4.2},    medium:{micro:6.8,gro:6.4,bloom:4.8},    aggressive:{micro:8.5,gro:8.0,bloom:6.0} },
-    early_bloom:   { light:{micro:5.3,gro:4.7,bloom:6.1},    medium:{micro:6.1,gro:5.3,bloom:6.6},    aggressive:{micro:7.6,gro:6.6,bloom:8.5} },
-    mid_late_bloom:{ light:{micro:4.7,gro:4.7,bloom:6.6},    medium:{micro:5.3,gro:5.3,bloom:7.6},    aggressive:{micro:6.6,gro:6.6,bloom:9.5} },
-    flush:         { light:{micro:0,gro:0,bloom:0},           medium:{micro:0,gro:0,bloom:0},           aggressive:{micro:0,gro:0,bloom:0},          isFlush:true },
+    seedling:     { light:{micro:1.3,gro:1.3,bloom:0},   medium:{micro:1.3,gro:1.3,bloom:0},   aggressive:{micro:1.3,gro:1.3,bloom:0},   seedlingFixed:true },
+    early_growth: { light:{micro:3.6,gro:3.4,bloom:2.6}, medium:{micro:4.2,gro:3.8,bloom:3.0}, aggressive:{micro:5.2,gro:4.8,bloom:3.7} },
+    late_growth:  { light:{micro:6.0,gro:5.6,bloom:4.2}, medium:{micro:6.8,gro:6.4,bloom:4.8}, aggressive:{micro:8.5,gro:8.0,bloom:6.0} },
+    early_flower: { light:{micro:5.3,gro:4.7,bloom:6.1}, medium:{micro:6.1,gro:5.3,bloom:6.6}, aggressive:{micro:7.6,gro:6.6,bloom:8.5} },
+    late_flower:  { light:{micro:4.7,gro:4.7,bloom:6.6}, medium:{micro:5.3,gro:5.3,bloom:7.6}, aggressive:{micro:6.6,gro:6.6,bloom:9.5} },
+    flush:        { light:{micro:0,gro:0,bloom:0},        medium:{micro:0,gro:0,bloom:0},        aggressive:{micro:0,gro:0,bloom:0},        isFlush:true },
   },
   "6part": {
     early_growth:  { light:{micro:2.8,gro:3.8,bloom:1.9,calimagic:1.9,floralicious:1.0,koolbloom:0},    medium:{micro:2.8,gro:4.7,bloom:2.3,calimagic:1.9,floralicious:1.0,koolbloom:0},    aggressive:{micro:3.8,gro:5.7,bloom:2.8,calimagic:2.0,floralicious:1.0,koolbloom:0} },
     late_growth:   { light:{micro:4.7,gro:5.7,bloom:3.8,calimagic:1.9,floralicious:1.0,koolbloom:0},    medium:{micro:5.7,gro:6.6,bloom:4.2,calimagic:1.9,floralicious:1.5,koolbloom:0},    aggressive:{micro:7.6,gro:8.5,bloom:4.7,calimagic:2.0,floralicious:2.0,koolbloom:0} },
-    early_bloom:   { light:{micro:3.8,gro:4.7,bloom:4.7,calimagic:1.9,floralicious:1.0,koolbloom:1.0},  medium:{micro:3.8,gro:5.7,bloom:5.7,calimagic:1.9,floralicious:1.5,koolbloom:1.0},  aggressive:{micro:5.7,gro:6.6,bloom:6.6,calimagic:2.0,floralicious:2.0,koolbloom:1.0} },
-    mid_late_bloom:{ light:{micro:3.8,gro:2.8,bloom:5.7,calimagic:1.9,floralicious:1.0,koolbloom:1.8},  medium:{micro:2.8,gro:2.8,bloom:6.6,calimagic:1.9,floralicious:1.5,koolbloom:1.9},  aggressive:{micro:4.7,gro:3.8,bloom:8.5,calimagic:2.0,floralicious:2.0,koolbloom:2.0} },
+    early_flower:  { light:{micro:3.8,gro:4.7,bloom:4.7,calimagic:1.9,floralicious:1.0,koolbloom:1.0},  medium:{micro:3.8,gro:5.7,bloom:5.7,calimagic:1.9,floralicious:1.5,koolbloom:1.0},  aggressive:{micro:5.7,gro:6.6,bloom:6.6,calimagic:2.0,floralicious:2.0,koolbloom:1.0} },
+    late_flower:  { light:{micro:3.8,gro:2.8,bloom:5.7,calimagic:1.9,floralicious:1.0,koolbloom:1.8},  medium:{micro:2.8,gro:2.8,bloom:6.6,calimagic:1.9,floralicious:1.5,koolbloom:1.9},  aggressive:{micro:4.7,gro:3.8,bloom:8.5,calimagic:2.0,floralicious:2.0,koolbloom:2.0} },
     flush:         { light:{micro:0,gro:0,bloom:0,calimagic:0,floralicious:0,koolbloom:0}, medium:{micro:0,gro:0,bloom:0,calimagic:0,floralicious:0,koolbloom:0}, aggressive:{micro:0,gro:0,bloom:0,calimagic:0,floralicious:0,koolbloom:0}, isFlush:true },
   },
   "10part": {
     early_growth:  { light:{micro:2.8,gro:3.8,bloom:1.9,calimagic:1.8,floralicious:1.0,koolbloom:0,rapidstart:1.0,ripen_p:0,armorsi:2.5},  medium:{micro:2.8,gro:4.7,bloom:2.3,calimagic:1.9,floralicious:1.0,koolbloom:0,rapidstart:1.0,ripen_p:0,armorsi:2.5},  aggressive:{micro:3.8,gro:5.7,bloom:2.8,calimagic:2.0,floralicious:1.0,koolbloom:0,rapidstart:1.0,ripen_p:0,armorsi:2.5} },
     late_growth:   { light:{micro:4.7,gro:5.7,bloom:3.8,calimagic:1.8,floralicious:1.0,koolbloom:0,rapidstart:1.0,ripen_p:0,armorsi:2.5},  medium:{micro:5.7,gro:6.6,bloom:3.8,calimagic:1.9,floralicious:1.5,koolbloom:0,rapidstart:1.0,ripen_p:0,armorsi:2.5},  aggressive:{micro:7.6,gro:8.5,bloom:4.7,calimagic:2.0,floralicious:2.0,koolbloom:0,rapidstart:1.0,ripen_p:0,armorsi:2.5} },
-    early_bloom:   { light:{micro:3.8,gro:3.8,bloom:5.7,calimagic:1.8,floralicious:1.0,koolbloom:1.0,rapidstart:1.0,ripen_p:0,armorsi:0},  medium:{micro:4.7,gro:3.8,bloom:6.6,calimagic:1.9,floralicious:1.5,koolbloom:1.0,rapidstart:1.0,ripen_p:0,armorsi:0},  aggressive:{micro:5.7,gro:4.7,bloom:8.5,calimagic:2.0,floralicious:2.0,koolbloom:1.0,rapidstart:1.0,ripen_p:0,armorsi:0} },
-    mid_bloom:     { light:{micro:2.8,gro:3.8,bloom:5.7,calimagic:1.8,floralicious:1.0,koolbloom:1.8,rapidstart:0,ripen_p:0,armorsi:0},    medium:{micro:2.8,gro:4.7,bloom:6.1,calimagic:1.9,floralicious:1.5,koolbloom:1.9,rapidstart:0,ripen_p:0,armorsi:0},    aggressive:{micro:3.8,gro:5.7,bloom:7.6,calimagic:2.0,floralicious:2.0,koolbloom:2.0,rapidstart:0,ripen_p:0,armorsi:0} },
-    late_bloom:    { light:{micro:2.7,gro:2.0,bloom:2.7,calimagic:1.0,floralicious:1.0,koolbloom:0,rapidstart:0,ripen_p:4.0,armorsi:2.5},  medium:{micro:2.8,gro:2.3,bloom:2.8,calimagic:1.0,floralicious:1.0,koolbloom:0,rapidstart:0,ripen_p:4.0,armorsi:2.5},  aggressive:{micro:3.8,gro:2.8,bloom:3.8,calimagic:1.0,floralicious:1.0,koolbloom:0,rapidstart:0,ripen_p:4.0,armorsi:2.5} },
-    ripen:         { light:{micro:2.8,gro:1.3,bloom:1.9,calimagic:0,floralicious:0,koolbloom:0,rapidstart:0,ripen_p:5.0,armorsi:0},        medium:{micro:2.8,gro:1.5,bloom:2.3,calimagic:0,floralicious:0,koolbloom:0,rapidstart:0,ripen_p:5.0,armorsi:0},        aggressive:{micro:3.8,gro:1.9,bloom:2.8,calimagic:0,floralicious:0,koolbloom:0,rapidstart:0,ripen_p:5.0,armorsi:0} },
+    early_flower: { light:{micro:3.8,gro:3.8,bloom:5.7,calimagic:1.8,floralicious:1.0,koolbloom:1.0,rapidstart:1.0,ripen_p:0,armorsi:0},  medium:{micro:4.7,gro:3.8,bloom:6.6,calimagic:1.9,floralicious:1.5,koolbloom:1.0,rapidstart:1.0,ripen_p:0,armorsi:0},  aggressive:{micro:5.7,gro:4.7,bloom:8.5,calimagic:2.0,floralicious:2.0,koolbloom:1.0,rapidstart:1.0,ripen_p:0,armorsi:0} },
+    late_flower:  { light:{micro:2.8,gro:3.8,bloom:5.7,calimagic:1.8,floralicious:1.0,koolbloom:1.8,rapidstart:0,ripen_p:0,armorsi:0},    medium:{micro:2.8,gro:4.7,bloom:6.1,calimagic:1.9,floralicious:1.5,koolbloom:1.9,rapidstart:0,ripen_p:0,armorsi:0},    aggressive:{micro:3.8,gro:5.7,bloom:7.6,calimagic:2.0,floralicious:2.0,koolbloom:2.0,rapidstart:0,ripen_p:0,armorsi:0} },
     flush:         { light:{micro:0,gro:0,bloom:0,calimagic:0,floralicious:0,koolbloom:0,rapidstart:0,ripen_p:0,armorsi:0}, medium:{micro:0,gro:0,bloom:0,calimagic:0,floralicious:0,koolbloom:0,rapidstart:0,ripen_p:0,armorsi:0}, aggressive:{micro:0,gro:0,bloom:0,calimagic:0,floralicious:0,koolbloom:0,rapidstart:0,ripen_p:0,armorsi:0}, isFlush:true },
   },
   // ── FloraPro Powder Standard ─────────────────────────────────────────────
   // Doses = ml/gal of 1 lb/gal concentrated stock solution. No strength tiers.
   "florapro_std": {
-    fp_propagation: { light:{micro:0,gro:0,bloom:0,fp_ca_micros:7.0,fp_grow:9.0,fp_bloom:0,fp_late_bloom:0},    medium:{micro:0,gro:0,bloom:0,fp_ca_micros:7.0,fp_grow:9.0,fp_bloom:0,fp_late_bloom:0},    aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:7.0,fp_grow:9.0,fp_bloom:0,fp_late_bloom:0} },
-    fp_vegetative:  { light:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:35.0,fp_bloom:0,fp_late_bloom:0},  medium:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:35.0,fp_bloom:0,fp_late_bloom:0},  aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:35.0,fp_bloom:0,fp_late_bloom:0} },
-    fp_early_flower:{ light:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:0,fp_bloom:31.5,fp_late_bloom:8.0}, medium:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:0,fp_bloom:31.5,fp_late_bloom:8.0}, aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:0,fp_bloom:31.5,fp_late_bloom:8.0} },
-    fp_mid_flower:  { light:{micro:0,gro:0,bloom:0,fp_ca_micros:26.5,fp_grow:0,fp_bloom:27.5,fp_late_bloom:14.0},medium:{micro:0,gro:0,bloom:0,fp_ca_micros:26.5,fp_grow:0,fp_bloom:27.5,fp_late_bloom:14.0},aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:26.5,fp_grow:0,fp_bloom:27.5,fp_late_bloom:14.0} },
-    fp_late_flower: { light:{micro:0,gro:0,bloom:0,fp_ca_micros:18.5,fp_grow:0,fp_bloom:15.5,fp_late_bloom:24.0},medium:{micro:0,gro:0,bloom:0,fp_ca_micros:18.5,fp_grow:0,fp_bloom:15.5,fp_late_bloom:24.0},aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:18.5,fp_grow:0,fp_bloom:15.5,fp_late_bloom:24.0} },
-    fp_finish:      { light:{micro:0,gro:0,bloom:0,fp_ca_micros:12.5,fp_grow:0,fp_bloom:0,fp_late_bloom:29.0},  medium:{micro:0,gro:0,bloom:0,fp_ca_micros:12.5,fp_grow:0,fp_bloom:0,fp_late_bloom:29.0},  aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:12.5,fp_grow:0,fp_bloom:0,fp_late_bloom:29.0} },
+    seedling:     { light:{micro:0,gro:0,bloom:0,fp_ca_micros:7.0,fp_grow:9.0,fp_bloom:0,fp_late_bloom:0},     medium:{micro:0,gro:0,bloom:0,fp_ca_micros:7.0,fp_grow:9.0,fp_bloom:0,fp_late_bloom:0},     aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:7.0,fp_grow:9.0,fp_bloom:0,fp_late_bloom:0} },
+    early_growth: { light:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:35.0,fp_bloom:0,fp_late_bloom:0},   medium:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:35.0,fp_bloom:0,fp_late_bloom:0},   aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:35.0,fp_bloom:0,fp_late_bloom:0} },
+    late_growth:  { light:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:35.0,fp_bloom:0,fp_late_bloom:0},   medium:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:35.0,fp_bloom:0,fp_late_bloom:0},   aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:35.0,fp_bloom:0,fp_late_bloom:0} },
+    early_flower: { light:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:0,fp_bloom:31.5,fp_late_bloom:8.0},  medium:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:0,fp_bloom:31.5,fp_late_bloom:8.0},  aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:0,fp_bloom:31.5,fp_late_bloom:8.0} },
+    late_flower:  { light:{micro:0,gro:0,bloom:0,fp_ca_micros:18.5,fp_grow:0,fp_bloom:15.5,fp_late_bloom:24.0}, medium:{micro:0,gro:0,bloom:0,fp_ca_micros:18.5,fp_grow:0,fp_bloom:15.5,fp_late_bloom:24.0}, aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:18.5,fp_grow:0,fp_bloom:15.5,fp_late_bloom:24.0} },
+    flush:        { light:{micro:0,gro:0,bloom:0,fp_ca_micros:12.5,fp_grow:0,fp_bloom:0,fp_late_bloom:29.0},    medium:{micro:0,gro:0,bloom:0,fp_ca_micros:12.5,fp_grow:0,fp_bloom:0,fp_late_bloom:29.0},    aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:12.5,fp_grow:0,fp_bloom:0,fp_late_bloom:29.0},    isFlush:true },
   },
   // ── FloraPro Powder High EC ──────────────────────────────────────────────
   "florapro_highec": {
-    fp_propagation: { light:{micro:0,gro:0,bloom:0,fp_ca_micros:7.0,fp_grow:9.0,fp_bloom:0,fp_late_bloom:0},    medium:{micro:0,gro:0,bloom:0,fp_ca_micros:7.0,fp_grow:9.0,fp_bloom:0,fp_late_bloom:0},    aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:7.0,fp_grow:9.0,fp_bloom:0,fp_late_bloom:0} },
-    fp_vegetative:  { light:{micro:0,gro:0,bloom:0,fp_ca_micros:31.0,fp_grow:38.0,fp_bloom:0,fp_late_bloom:0},  medium:{micro:0,gro:0,bloom:0,fp_ca_micros:31.0,fp_grow:38.0,fp_bloom:0,fp_late_bloom:0},  aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:31.0,fp_grow:38.0,fp_bloom:0,fp_late_bloom:0} },
-    fp_early_flower:{ light:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:0,fp_bloom:33.0,fp_late_bloom:12.5},medium:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:0,fp_bloom:33.0,fp_late_bloom:12.5},aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:0,fp_bloom:33.0,fp_late_bloom:12.5} },
-    fp_mid_flower:  { light:{micro:0,gro:0,bloom:0,fp_ca_micros:28.5,fp_grow:0,fp_bloom:25.5,fp_late_bloom:21.0},medium:{micro:0,gro:0,bloom:0,fp_ca_micros:28.5,fp_grow:0,fp_bloom:25.5,fp_late_bloom:21.0},aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:28.5,fp_grow:0,fp_bloom:25.5,fp_late_bloom:21.0} },
-    fp_late_flower: { light:{micro:0,gro:0,bloom:0,fp_ca_micros:19.0,fp_grow:0,fp_bloom:15.0,fp_late_bloom:26.0},medium:{micro:0,gro:0,bloom:0,fp_ca_micros:19.0,fp_grow:0,fp_bloom:15.0,fp_late_bloom:26.0},aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:19.0,fp_grow:0,fp_bloom:15.0,fp_late_bloom:26.0} },
-    fp_finish:      { light:{micro:0,gro:0,bloom:0,fp_ca_micros:12.5,fp_grow:0,fp_bloom:0,fp_late_bloom:32.0},  medium:{micro:0,gro:0,bloom:0,fp_ca_micros:12.5,fp_grow:0,fp_bloom:0,fp_late_bloom:32.0},  aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:12.5,fp_grow:0,fp_bloom:0,fp_late_bloom:32.0} },
+    seedling:     { light:{micro:0,gro:0,bloom:0,fp_ca_micros:7.0,fp_grow:9.0,fp_bloom:0,fp_late_bloom:0},     medium:{micro:0,gro:0,bloom:0,fp_ca_micros:7.0,fp_grow:9.0,fp_bloom:0,fp_late_bloom:0},     aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:7.0,fp_grow:9.0,fp_bloom:0,fp_late_bloom:0} },
+    early_growth: { light:{micro:0,gro:0,bloom:0,fp_ca_micros:31.0,fp_grow:38.0,fp_bloom:0,fp_late_bloom:0},   medium:{micro:0,gro:0,bloom:0,fp_ca_micros:31.0,fp_grow:38.0,fp_bloom:0,fp_late_bloom:0},   aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:31.0,fp_grow:38.0,fp_bloom:0,fp_late_bloom:0} },
+    late_growth:  { light:{micro:0,gro:0,bloom:0,fp_ca_micros:31.0,fp_grow:38.0,fp_bloom:0,fp_late_bloom:0},   medium:{micro:0,gro:0,bloom:0,fp_ca_micros:31.0,fp_grow:38.0,fp_bloom:0,fp_late_bloom:0},   aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:31.0,fp_grow:38.0,fp_bloom:0,fp_late_bloom:0} },
+    early_flower: { light:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:0,fp_bloom:33.0,fp_late_bloom:12.5}, medium:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:0,fp_bloom:33.0,fp_late_bloom:12.5}, aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:30.0,fp_grow:0,fp_bloom:33.0,fp_late_bloom:12.5} },
+    late_flower:  { light:{micro:0,gro:0,bloom:0,fp_ca_micros:19.0,fp_grow:0,fp_bloom:15.0,fp_late_bloom:26.0}, medium:{micro:0,gro:0,bloom:0,fp_ca_micros:19.0,fp_grow:0,fp_bloom:15.0,fp_late_bloom:26.0}, aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:19.0,fp_grow:0,fp_bloom:15.0,fp_late_bloom:26.0} },
+    flush:        { light:{micro:0,gro:0,bloom:0,fp_ca_micros:12.5,fp_grow:0,fp_bloom:0,fp_late_bloom:32.0},    medium:{micro:0,gro:0,bloom:0,fp_ca_micros:12.5,fp_grow:0,fp_bloom:0,fp_late_bloom:32.0},    aggressive:{micro:0,gro:0,bloom:0,fp_ca_micros:12.5,fp_grow:0,fp_bloom:0,fp_late_bloom:32.0},    isFlush:true },
   },
   // ── BioThrive Basic (2-Part) ──────────────────────────────────────────────
   // Grow/Bloom in grams/gal. CaMg+ in ml/gal. Source: GH Weekly Feedchart.
   "biothrive_basic": {
     early_growth: { light:{micro:0,gro:0,bloom:0,bt_grow:5.5,bt_bloom_p:0,bt_camg:2.0},  medium:{micro:0,gro:0,bloom:0,bt_grow:6.5,bt_bloom_p:0,bt_camg:2.5},  aggressive:{micro:0,gro:0,bloom:0,bt_grow:8.0,bt_bloom_p:0,bt_camg:3.0} },
     late_growth:  { light:{micro:0,gro:0,bloom:0,bt_grow:8.5,bt_bloom_p:0,bt_camg:3.5},  medium:{micro:0,gro:0,bloom:0,bt_grow:10.0,bt_bloom_p:0,bt_camg:4.0}, aggressive:{micro:0,gro:0,bloom:0,bt_grow:12.5,bt_bloom_p:0,bt_camg:5.0} },
-    early_bloom:  { light:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:10.5,bt_camg:6.0}, medium:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:12.0,bt_camg:6.5}, aggressive:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:15.0,bt_camg:8.5} },
-    bt_bloom:     { light:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:8.5,bt_camg:5.2},  medium:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:10.0,bt_camg:6.0}, aggressive:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:12.5,bt_camg:7.5} },
+    early_flower: { light:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:10.5,bt_camg:6.0}, medium:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:12.0,bt_camg:6.5}, aggressive:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:15.0,bt_camg:8.5} },
+    late_flower:  { light:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:8.5,bt_camg:5.2},  medium:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:10.0,bt_camg:6.0}, aggressive:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:12.5,bt_camg:7.5} },
   },
   // ── BioThrive Custom (7-Part) ─────────────────────────────────────────────
   "biothrive_custom": {
     early_growth: { light:{micro:0,gro:0,bloom:0,bt_grow:5.0,bt_bloom_p:0,bt_camg:3.5,bt_bioroot:3.5,bt_bioweed:3.5,bt_biobud:0,bt_biomarine:3.5,bt_diamond:3.5}, medium:{micro:0,gro:0,bloom:0,bt_grow:5.5,bt_bloom_p:0,bt_camg:4.0,bt_bioroot:4.0,bt_bioweed:4.0,bt_biobud:0,bt_biomarine:4.0,bt_diamond:4.0}, aggressive:{micro:0,gro:0,bloom:0,bt_grow:7.0,bt_bloom_p:0,bt_camg:5.0,bt_bioroot:5.0,bt_bioweed:5.0,bt_biobud:0,bt_biomarine:5.0,bt_diamond:5.0} },
     late_growth:  { light:{micro:0,gro:0,bloom:0,bt_grow:8.5,bt_bloom_p:0,bt_camg:5.2,bt_bioroot:3.5,bt_bioweed:3.5,bt_biobud:0,bt_biomarine:3.5,bt_diamond:3.5}, medium:{micro:0,gro:0,bloom:0,bt_grow:9.5,bt_bloom_p:0,bt_camg:6.0,bt_bioroot:4.0,bt_bioweed:4.0,bt_biobud:0,bt_biomarine:4.0,bt_diamond:4.0}, aggressive:{micro:0,gro:0,bloom:0,bt_grow:12.0,bt_bloom_p:0,bt_camg:7.5,bt_bioroot:5.0,bt_bioweed:5.0,bt_biobud:0,bt_biomarine:5.0,bt_diamond:5.0} },
-    early_bloom:  { light:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:8.5,bt_camg:6.0,bt_bioroot:3.5,bt_bioweed:3.5,bt_biobud:2.5,bt_biomarine:3.5,bt_diamond:3.5}, medium:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:10.0,bt_camg:6.8,bt_bioroot:4.0,bt_bioweed:4.0,bt_biobud:2.5,bt_biomarine:4.0,bt_diamond:4.0}, aggressive:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:12.5,bt_camg:8.5,bt_bioroot:5.0,bt_bioweed:5.0,bt_biobud:2.5,bt_biomarine:7.5,bt_diamond:5.0} },
-    bt_bloom:     { light:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:6.0,bt_camg:6.0,bt_bioroot:3.5,bt_bioweed:0,bt_biobud:2.5,bt_biomarine:5.3,bt_diamond:3.5}, medium:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:6.8,bt_camg:6.8,bt_bioroot:4.0,bt_bioweed:0,bt_biobud:2.5,bt_biomarine:6.0,bt_diamond:4.0}, aggressive:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:8.5,bt_camg:8.5,bt_bioroot:5.0,bt_bioweed:0,bt_biobud:2.5,bt_biomarine:7.5,bt_diamond:5.0} },
+    early_flower: { light:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:8.5,bt_camg:6.0,bt_bioroot:3.5,bt_bioweed:3.5,bt_biobud:2.5,bt_biomarine:3.5,bt_diamond:3.5}, medium:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:10.0,bt_camg:6.8,bt_bioroot:4.0,bt_bioweed:4.0,bt_biobud:2.5,bt_biomarine:4.0,bt_diamond:4.0}, aggressive:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:12.5,bt_camg:8.5,bt_bioroot:5.0,bt_bioweed:5.0,bt_biobud:2.5,bt_biomarine:7.5,bt_diamond:5.0} },
+    late_flower:  { light:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:6.0,bt_camg:6.0,bt_bioroot:3.5,bt_bioweed:0,bt_biobud:2.5,bt_biomarine:5.3,bt_diamond:3.5}, medium:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:6.8,bt_camg:6.8,bt_bioroot:4.0,bt_bioweed:0,bt_biobud:2.5,bt_biomarine:6.0,bt_diamond:4.0}, aggressive:{micro:0,gro:0,bloom:0,bt_grow:0,bt_bloom_p:8.5,bt_camg:8.5,bt_bioroot:5.0,bt_bioweed:0,bt_biobud:2.5,bt_biomarine:7.5,bt_diamond:5.0} },
   },
   // ── MaxiSeries Indoor (2-Part) ────────────────────────────────────────────
   // MaxiGro / MaxiBloom in g/gal. CALiMAGic in ml/gal. Source: GH Feedchart.
   "maxi_indoor": {
     early_growth:       { light:{micro:0,gro:0,bloom:0,mx_gro:2.7,mx_bloom_p:0,mx_calmag:1.8}, medium:{micro:0,gro:0,bloom:0,mx_gro:3.0,mx_bloom_p:0,mx_calmag:2.0}, aggressive:{micro:0,gro:0,bloom:0,mx_gro:3.8,mx_bloom_p:0,mx_calmag:2.5} },
     late_growth:        { light:{micro:0,gro:0,bloom:0,mx_gro:4.0,mx_bloom_p:0,mx_calmag:1.8}, medium:{micro:0,gro:0,bloom:0,mx_gro:4.5,mx_bloom_p:0,mx_calmag:2.0}, aggressive:{micro:0,gro:0,bloom:0,mx_gro:5.5,mx_bloom_p:0,mx_calmag:2.5} },
-    mx_early_mid_bloom: { light:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:4.0,mx_calmag:2.5}, medium:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:4.5,mx_calmag:2.8}, aggressive:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:5.7,mx_calmag:3.5} },
-    mx_late_bloom_ripen:{ light:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:3.8,mx_calmag:1.5}, medium:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:4.5,mx_calmag:2.0}, aggressive:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:5.5,mx_calmag:2.0} },
+    early_flower: { light:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:4.0,mx_calmag:2.5}, medium:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:4.5,mx_calmag:2.8}, aggressive:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:5.7,mx_calmag:3.5} },
+    late_flower:  { light:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:3.8,mx_calmag:1.5}, medium:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:4.5,mx_calmag:2.0}, aggressive:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:5.5,mx_calmag:2.0} },
   },
   // ── MaxiSeries Outdoor (1-Part) ────────────────────────────────────────────
   "maxi_outdoor": {
-    mx_growth: { light:{micro:0,gro:0,bloom:0,mx_gro:4.6,mx_bloom_p:0}, medium:{micro:0,gro:0,bloom:0,mx_gro:5.2,mx_bloom_p:0}, aggressive:{micro:0,gro:0,bloom:0,mx_gro:6.5,mx_bloom_p:0} },
-    mx_bloom:  { light:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:3.9}, medium:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:4.4}, aggressive:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:5.5} },
+    early_growth: { light:{micro:0,gro:0,bloom:0,mx_gro:4.6,mx_bloom_p:0}, medium:{micro:0,gro:0,bloom:0,mx_gro:5.2,mx_bloom_p:0}, aggressive:{micro:0,gro:0,bloom:0,mx_gro:6.5,mx_bloom_p:0} },
+    early_flower: { light:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:3.9}, medium:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:4.4}, aggressive:{micro:0,gro:0,bloom:0,mx_gro:0,mx_bloom_p:5.5} },
   },
   // ── FloraNova 1-Part ──────────────────────────────────────────────────────
   // Liquid ml/gal. Use Grow in veg, Bloom in flower — never both at once.
   "floranvoa_1part": {
     early_growth: { light:{micro:0,gro:0,bloom:0,fn_grow:3.5,fn_bloom:0}, medium:{micro:0,gro:0,bloom:0,fn_grow:4.0,fn_bloom:0}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:5.0,fn_bloom:0} },
     late_growth:  { light:{micro:0,gro:0,bloom:0,fn_grow:5.3,fn_bloom:0}, medium:{micro:0,gro:0,bloom:0,fn_grow:6.0,fn_bloom:0}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:7.5,fn_bloom:0} },
-    early_bloom:  { light:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:5.3}, medium:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:6.0}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:7.5} },
-    mid_bloom:    { light:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:4.4}, medium:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:5.0}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:6.3} },
+    early_flower: { light:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:5.3}, medium:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:6.0}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:7.5} },
+    late_flower:  { light:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:4.4}, medium:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:5.0}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:6.3} },
   },
   // ── FloraNova 4-Part ──────────────────────────────────────────────────────
   "floranvoa_4part": {
     early_growth: { light:{micro:0,gro:0,bloom:0,fn_grow:3.2,fn_bloom:0,calimagic:1.0,floralicious:1.0,koolbloom:0}, medium:{micro:0,gro:0,bloom:0,fn_grow:3.6,fn_bloom:0,calimagic:1.2,floralicious:1.0,koolbloom:0}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:4.5,fn_bloom:0,calimagic:1.5,floralicious:1.0,koolbloom:0} },
     late_growth:  { light:{micro:0,gro:0,bloom:0,fn_grow:4.2,fn_bloom:0,calimagic:2.0,floralicious:1.0,koolbloom:0}, medium:{micro:0,gro:0,bloom:0,fn_grow:4.8,fn_bloom:0,calimagic:2.4,floralicious:1.5,koolbloom:0}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:6.0,fn_bloom:0,calimagic:3.0,floralicious:2.0,koolbloom:0} },
-    early_bloom:  { light:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:4.2,calimagic:1.8,floralicious:1.0,koolbloom:1.0}, medium:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:4.8,calimagic:2.0,floralicious:1.5,koolbloom:1.0}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:6.0,calimagic:2.5,floralicious:2.0,koolbloom:1.0} },
-    mid_bloom:    { light:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:3.4,calimagic:1.8,floralicious:1.0,koolbloom:1.4}, medium:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:3.8,calimagic:2.0,floralicious:1.5,koolbloom:1.5}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:4.8,calimagic:2.5,floralicious:2.0,koolbloom:2.0} },
+    early_flower: { light:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:4.2,calimagic:1.8,floralicious:1.0,koolbloom:1.0}, medium:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:4.8,calimagic:2.0,floralicious:1.5,koolbloom:1.0}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:6.0,calimagic:2.5,floralicious:2.0,koolbloom:1.0} },
+    late_flower:  { light:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:3.4,calimagic:1.8,floralicious:1.0,koolbloom:1.4}, medium:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:3.8,calimagic:2.0,floralicious:1.5,koolbloom:1.5}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:4.8,calimagic:2.5,floralicious:2.0,koolbloom:2.0} },
   },
   // ── FloraNova 8-Part ──────────────────────────────────────────────────────
   "floranvoa_8part": {
     early_growth: { light:{micro:0,gro:0,bloom:0,fn_grow:3.2,fn_bloom:0,calimagic:1.0,floralicious:1.0,koolbloom:0,rapidstart:1.0,ripen_p:0,armorsi:2.5}, medium:{micro:0,gro:0,bloom:0,fn_grow:3.6,fn_bloom:0,calimagic:1.2,floralicious:1.0,koolbloom:0,rapidstart:1.0,ripen_p:0,armorsi:2.5}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:4.5,fn_bloom:0,calimagic:1.5,floralicious:1.0,koolbloom:0,rapidstart:1.0,ripen_p:0,armorsi:2.5} },
     late_growth:  { light:{micro:0,gro:0,bloom:0,fn_grow:4.2,fn_bloom:0,calimagic:2.0,floralicious:1.0,koolbloom:0,rapidstart:1.0,ripen_p:0,armorsi:2.5}, medium:{micro:0,gro:0,bloom:0,fn_grow:4.8,fn_bloom:0,calimagic:2.4,floralicious:1.5,koolbloom:0,rapidstart:1.0,ripen_p:0,armorsi:2.5}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:6.0,fn_bloom:0,calimagic:3.0,floralicious:2.0,koolbloom:0,rapidstart:1.0,ripen_p:0,armorsi:2.5} },
-    early_bloom:  { light:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:4.6,calimagic:1.8,floralicious:1.0,koolbloom:1.0,rapidstart:1.0,ripen_p:0,armorsi:2.5}, medium:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:5.2,calimagic:2.0,floralicious:1.5,koolbloom:1.0,rapidstart:1.0,ripen_p:0,armorsi:2.5}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:6.5,calimagic:2.5,floralicious:2.0,koolbloom:1.0,rapidstart:1.0,ripen_p:0,armorsi:2.5} },
-    mid_bloom:    { light:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:3.4,calimagic:1.8,floralicious:1.0,koolbloom:1.4,rapidstart:0,ripen_p:0,armorsi:2.5}, medium:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:3.8,calimagic:2.0,floralicious:1.5,koolbloom:1.5,rapidstart:0,ripen_p:0,armorsi:2.5}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:4.8,calimagic:2.5,floralicious:2.0,koolbloom:2.0,rapidstart:0,ripen_p:0,armorsi:2.5} },
-    late_bloom:   { light:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:2.7,calimagic:1.4,floralicious:0,koolbloom:0,rapidstart:0,ripen_p:0,armorsi:2.5}, medium:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:2.4,calimagic:1.5,floralicious:0,koolbloom:0,rapidstart:0,ripen_p:0,armorsi:2.5}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:3.0,calimagic:2.0,floralicious:0,koolbloom:0,rapidstart:0,ripen_p:0,armorsi:2.5} },
-    ripen:        { light:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:0,calimagic:0,floralicious:0,koolbloom:0,rapidstart:0,ripen_p:5.0,armorsi:0}, medium:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:3.2,calimagic:0,floralicious:0,koolbloom:0,rapidstart:0,ripen_p:5.0,armorsi:0}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:4.0,calimagic:0,floralicious:0,koolbloom:0,rapidstart:0,ripen_p:5.0,armorsi:0} },
+    early_flower: { light:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:4.6,calimagic:1.8,floralicious:1.0,koolbloom:1.0,rapidstart:1.0,ripen_p:0,armorsi:2.5}, medium:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:5.2,calimagic:2.0,floralicious:1.5,koolbloom:1.0,rapidstart:1.0,ripen_p:0,armorsi:2.5}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:6.5,calimagic:2.5,floralicious:2.0,koolbloom:1.0,rapidstart:1.0,ripen_p:0,armorsi:2.5} },
+    late_flower:  { light:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:3.4,calimagic:1.8,floralicious:1.0,koolbloom:1.4,rapidstart:0,ripen_p:0,armorsi:2.5}, medium:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:3.8,calimagic:2.0,floralicious:1.5,koolbloom:1.5,rapidstart:0,ripen_p:0,armorsi:2.5}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:4.8,calimagic:2.5,floralicious:2.0,koolbloom:2.0,rapidstart:0,ripen_p:0,armorsi:2.5} },
     flush:        { light:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:0,calimagic:0,floralicious:0,koolbloom:0,rapidstart:0,ripen_p:0,armorsi:0}, medium:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:0,calimagic:0,floralicious:0,koolbloom:0,rapidstart:0,ripen_p:0,armorsi:0}, aggressive:{micro:0,gro:0,bloom:0,fn_grow:0,fn_bloom:0,calimagic:0,floralicious:0,koolbloom:0,rapidstart:0,ripen_p:0,armorsi:0}, isFlush:true },
   },
 };
@@ -263,83 +238,79 @@ const EC_RANGES = {
     seedling:      { light:[0.4,0.6],  medium:[0.4,0.6],  aggressive:[0.4,0.6]  },
     early_growth:  { light:[0.9,1.1],  medium:[1.0,1.2],  aggressive:[1.3,1.5]  },
     late_growth:   { light:[1.4,1.7],  medium:[1.6,2.0],  aggressive:[2.0,2.5]  },
-    early_bloom:   { light:[1.4,1.7],  medium:[1.6,1.9],  aggressive:[2.0,2.4]  },
-    mid_late_bloom:{ light:[1.4,1.7],  medium:[1.6,1.9],  aggressive:[1.9,2.4]  },
+    early_flower: { light:[1.4,1.7],  medium:[1.6,1.9],  aggressive:[2.0,2.4]  },
+    late_flower:  { light:[1.4,1.7],  medium:[1.6,1.9],  aggressive:[1.9,2.4]  },
     flush:         { light:[0.0,0.3],  medium:[0.0,0.3],  aggressive:[0.0,0.3]  },
   },
   "6part": {
     early_growth:  { light:[1.0,1.2],  medium:[1.1,1.3],  aggressive:[1.3,1.6]  },
     late_growth:   { light:[1.5,1.8],  medium:[1.7,2.1],  aggressive:[2.1,2.5]  },
-    early_bloom:   { light:[1.5,1.8],  medium:[1.6,2.0],  aggressive:[2.0,2.4]  },
-    mid_late_bloom:{ light:[1.5,1.8],  medium:[1.6,2.0],  aggressive:[1.9,2.4]  },
+    early_flower: { light:[1.5,1.8],  medium:[1.6,2.0],  aggressive:[2.0,2.4]  },
+    late_flower:  { light:[1.5,1.8],  medium:[1.6,2.0],  aggressive:[1.9,2.4]  },
     flush:         { light:[0.0,0.3],  medium:[0.0,0.3],  aggressive:[0.0,0.3]  },
   },
   "10part": {
     early_growth:  { light:[1.0,1.2],  medium:[1.1,1.3],  aggressive:[1.3,1.6]  },
     late_growth:   { light:[1.5,1.8],  medium:[1.7,2.1],  aggressive:[2.1,2.5]  },
-    early_bloom:   { light:[1.5,1.9],  medium:[1.7,2.0],  aggressive:[2.0,2.5]  },
-    mid_bloom:     { light:[1.4,1.8],  medium:[1.6,2.0],  aggressive:[1.9,2.3]  },
-    late_bloom:    { light:[1.1,1.3],  medium:[1.2,1.4],  aggressive:[1.4,1.7]  },
-    ripen:         { light:[0.9,1.1],  medium:[1.0,1.2],  aggressive:[1.2,1.4]  },
+    early_flower: { light:[1.5,1.9],  medium:[1.7,2.0],  aggressive:[2.0,2.5]  },
+    late_flower:  { light:[1.4,1.8],  medium:[1.6,2.0],  aggressive:[1.9,2.3]  },
     flush:         { light:[0.0,0.3],  medium:[0.0,0.3],  aggressive:[0.0,0.3]  },
   },
   "florapro_std": {
-    fp_propagation: { light:[0.6,0.8],  medium:[0.6,0.8],  aggressive:[0.6,0.8]  },
-    fp_vegetative:  { light:[2.3,2.5],  medium:[2.3,2.5],  aggressive:[2.3,2.5]  },
-    fp_early_flower:{ light:[2.4,2.6],  medium:[2.4,2.6],  aggressive:[2.4,2.6]  },
-    fp_mid_flower:  { light:[2.3,2.5],  medium:[2.3,2.5],  aggressive:[2.3,2.5]  },
-    fp_late_flower: { light:[1.9,2.1],  medium:[1.9,2.1],  aggressive:[1.9,2.1]  },
-    fp_finish:      { light:[1.3,1.5],  medium:[1.3,1.5],  aggressive:[1.3,1.5]  },
+    seedling:     { light:[0.6,0.8],  medium:[0.6,0.8],  aggressive:[0.6,0.8]  },
+    early_growth: { light:[2.3,2.5],  medium:[2.3,2.5],  aggressive:[2.3,2.5]  },
+    late_growth:  { light:[2.3,2.5],  medium:[2.3,2.5],  aggressive:[2.3,2.5]  },
+    early_flower: { light:[2.4,2.6],  medium:[2.4,2.6],  aggressive:[2.4,2.6]  },
+    late_flower:  { light:[1.9,2.1],  medium:[1.9,2.1],  aggressive:[1.9,2.1]  },
+    flush:        { light:[1.3,1.5],  medium:[1.3,1.5],  aggressive:[1.3,1.5]  },
   },
   "florapro_highec": {
-    fp_propagation: { light:[0.6,0.8],  medium:[0.6,0.8],  aggressive:[0.6,0.8]  },
-    fp_vegetative:  { light:[2.5,2.7],  medium:[2.5,2.7],  aggressive:[2.5,2.7]  },
-    fp_early_flower:{ light:[2.6,2.8],  medium:[2.6,2.8],  aggressive:[2.6,2.8]  },
-    fp_mid_flower:  { light:[2.4,2.6],  medium:[2.4,2.6],  aggressive:[2.4,2.6]  },
-    fp_late_flower: { light:[1.9,2.1],  medium:[1.9,2.1],  aggressive:[1.9,2.1]  },
-    fp_finish:      { light:[1.5,1.7],  medium:[1.5,1.7],  aggressive:[1.5,1.7]  },
+    seedling:     { light:[0.6,0.8],  medium:[0.6,0.8],  aggressive:[0.6,0.8]  },
+    early_growth: { light:[2.5,2.7],  medium:[2.5,2.7],  aggressive:[2.5,2.7]  },
+    late_growth:  { light:[2.5,2.7],  medium:[2.5,2.7],  aggressive:[2.5,2.7]  },
+    early_flower: { light:[2.6,2.8],  medium:[2.6,2.8],  aggressive:[2.6,2.8]  },
+    late_flower:  { light:[1.9,2.1],  medium:[1.9,2.1],  aggressive:[1.9,2.1]  },
+    flush:        { light:[1.5,1.7],  medium:[1.5,1.7],  aggressive:[1.5,1.7]  },
   },
   "biothrive_basic": {
     early_growth: { light:[0.4,0.6],  medium:[0.5,0.7],  aggressive:[0.6,0.8]  },
     late_growth:  { light:[0.8,1.0],  medium:[0.9,1.1],  aggressive:[1.0,1.2]  },
-    early_bloom:  { light:[1.1,1.4],  medium:[1.2,1.5],  aggressive:[1.5,1.8]  },
-    bt_bloom:     { light:[0.9,1.1],  medium:[1.0,1.3],  aggressive:[1.2,1.5]  },
+    early_flower: { light:[1.1,1.4],  medium:[1.2,1.5],  aggressive:[1.5,1.8]  },
+    late_flower:  { light:[0.9,1.1],  medium:[1.0,1.3],  aggressive:[1.2,1.5]  },
   },
   "biothrive_custom": {
     early_growth: { light:[0.6,0.8],  medium:[0.7,0.9],  aggressive:[0.8,1.0]  },
     late_growth:  { light:[1.0,1.2],  medium:[1.1,1.3],  aggressive:[1.2,1.4]  },
-    early_bloom:  { light:[1.0,1.3],  medium:[1.2,1.5],  aggressive:[1.5,1.8]  },
-    bt_bloom:     { light:[0.9,1.2],  medium:[1.1,1.4],  aggressive:[1.4,1.7]  },
+    early_flower: { light:[1.0,1.3],  medium:[1.2,1.5],  aggressive:[1.5,1.8]  },
+    late_flower:  { light:[0.9,1.2],  medium:[1.1,1.4],  aggressive:[1.4,1.7]  },
   },
   "maxi_indoor": {
     early_growth:       { light:[0.9,1.3],  medium:[1.1,1.4],  aggressive:[1.4,1.8]  },
     late_growth:        { light:[1.3,1.6],  medium:[1.5,1.8],  aggressive:[1.9,2.3]  },
-    mx_early_mid_bloom: { light:[1.4,1.7],  medium:[1.6,1.9],  aggressive:[2.2,2.6]  },
-    mx_late_bloom_ripen:{ light:[1.2,1.5],  medium:[1.4,1.7],  aggressive:[1.8,2.2]  },
+    early_flower: { light:[1.4,1.7],  medium:[1.6,1.9],  aggressive:[2.2,2.6]  },
+    late_flower:  { light:[1.2,1.5],  medium:[1.4,1.7],  aggressive:[1.8,2.2]  },
   },
   "maxi_outdoor": {
-    mx_growth: { light:[1.3,1.6],  medium:[1.5,1.8],  aggressive:[1.9,2.3]  },
-    mx_bloom:  { light:[1.4,1.7],  medium:[1.6,1.9],  aggressive:[2.2,2.6]  },
+    early_growth: { light:[1.3,1.6],  medium:[1.5,1.8],  aggressive:[1.9,2.3]  },
+    early_flower: { light:[1.4,1.7],  medium:[1.6,1.9],  aggressive:[2.2,2.6]  },
   },
   "floranvoa_1part": {
     early_growth: { light:[0.9,1.2],  medium:[1.2,1.5],  aggressive:[1.5,1.8]  },
     late_growth:  { light:[1.5,1.8],  medium:[1.8,2.1],  aggressive:[2.2,2.5]  },
-    early_bloom:  { light:[1.5,1.8],  medium:[1.8,2.1],  aggressive:[2.1,2.4]  },
-    mid_bloom:    { light:[1.2,1.5],  medium:[1.5,1.8],  aggressive:[1.8,2.1]  },
+    early_flower: { light:[1.5,1.8],  medium:[1.8,2.1],  aggressive:[2.1,2.4]  },
+    late_flower:  { light:[1.2,1.5],  medium:[1.5,1.8],  aggressive:[1.8,2.1]  },
   },
   "floranvoa_4part": {
     early_growth: { light:[1.0,1.3],  medium:[1.2,1.5],  aggressive:[1.5,1.8]  },
     late_growth:  { light:[1.6,1.9],  medium:[1.8,2.1],  aggressive:[2.2,2.5]  },
-    early_bloom:  { light:[1.6,1.9],  medium:[1.8,2.1],  aggressive:[2.2,2.5]  },
-    mid_bloom:    { light:[1.3,1.6],  medium:[1.5,1.8],  aggressive:[1.9,2.2]  },
+    early_flower: { light:[1.6,1.9],  medium:[1.8,2.1],  aggressive:[2.2,2.5]  },
+    late_flower:  { light:[1.3,1.6],  medium:[1.5,1.8],  aggressive:[1.9,2.2]  },
   },
   "floranvoa_8part": {
     early_growth: { light:[1.0,1.3],  medium:[1.2,1.5],  aggressive:[1.5,1.8]  },
     late_growth:  { light:[1.6,1.9],  medium:[1.8,2.1],  aggressive:[2.2,2.5]  },
-    early_bloom:  { light:[1.6,1.9],  medium:[1.8,2.1],  aggressive:[2.2,2.5]  },
-    mid_bloom:    { light:[1.3,1.6],  medium:[1.5,1.8],  aggressive:[1.9,2.2]  },
-    late_bloom:   { light:[1.1,1.4],  medium:[1.4,1.7],  aggressive:[1.6,1.9]  },
-    ripen:        { light:[1.1,1.4],  medium:[1.3,1.6],  aggressive:[1.5,1.8]  },
+    early_flower: { light:[1.6,1.9],  medium:[1.8,2.1],  aggressive:[2.2,2.5]  },
+    late_flower:  { light:[1.3,1.6],  medium:[1.5,1.8],  aggressive:[1.9,2.2]  },
     flush:        { light:[0.0,0.3],  medium:[0.0,0.3],  aggressive:[0.0,0.3]  },
   },
 };
@@ -355,7 +326,7 @@ const INCL_META = {
   fp_ca_micros: { name:"FloraPro Ca + Micros",brand:"General Hydroponics", color:"#8B1A2F", icon:"🧪", mixOrder:0, isPowder:true, powderNote:"Add first. Use mixing chamber before other inputs." },
   fp_grow:      { name:"FloraPro Grow",       brand:"General Hydroponics", color:"#78BE20", icon:"🌿", mixOrder:3, isPowder:true },
   fp_bloom:     { name:"FloraPro Bloom",      brand:"General Hydroponics", color:"#e05080", icon:"🌸", mixOrder:4, isPowder:true },
-  fp_late_bloom:{ name:"FloraPro Late Bloom", brand:"General Hydroponics", color:"#F7941D", icon:"🌺", mixOrder:5, isPowder:true },
+  fp_late_flower:{ name:"FloraPro Late Bloom", brand:"General Hydroponics", color:"#F7941D", icon:"🌺", mixOrder:5, isPowder:true },
   // BioThrive products — Grow/Bloom in g/gal, supplements in ml/gal
   bt_grow:      { name:"BioThrive Grow",      brand:"General Hydroponics", color:"#78BE20", icon:"🌿", mixOrder:2, unit:"g",  powderNote:"Granular — dissolve fully before adding other products" },
   bt_bloom_p:   { name:"BioThrive Bloom",     brand:"General Hydroponics", color:"#e05080", icon:"🌸", mixOrder:2, unit:"g",  powderNote:"Granular — dissolve fully before adding other products" },
@@ -413,39 +384,39 @@ const EC_COLOR = { safe:"#78BE20", caution:"#F7941D", danger:"#e05050" };
 
 const SUPPLEMENTS = [
   { id:"calimagic",name:"CALiMAGiC",brand:"Gen. Hydroponics",category:"cal-mag",tapWaterWarning:true,waterBoost:{ro:1.25,soft:1.0,tap:0.5},mixOrder:1,conflicts:["botanicare_calmag"],
-    stageRules:{seedling:{dose:{light:1.0,medium:1.0,aggressive:1.0},note:"conservative"},early_growth:{dose:{light:1.8,medium:1.9,aggressive:2.0}},late_growth:{dose:{light:1.8,medium:1.9,aggressive:2.0}},early_bloom:{dose:{light:1.8,medium:1.9,aggressive:2.0}},mid_late_bloom:{dose:{light:1.0,medium:1.0,aggressive:1.0},note:"taper"},mid_bloom:{dose:{light:1.0,medium:1.0,aggressive:1.0}},late_bloom:{dose:{light:1.0,medium:1.0,aggressive:1.0},note:"taper"}} },
+    stageRules:{seedling:{dose:{light:1.0,medium:1.0,aggressive:1.0},note:"conservative"},early_growth:{dose:{light:1.8,medium:1.9,aggressive:2.0}},late_growth:{dose:{light:1.8,medium:1.9,aggressive:2.0}},early_flower:{dose:{light:1.8,medium:1.9,aggressive:2.0}},late_flower:{dose:{light:1.0,medium:1.0,aggressive:1.0},note:"taper"},late_flower:{dose:{light:1.0,medium:1.0,aggressive:1.0}},late_flower:{dose:{light:1.0,medium:1.0,aggressive:1.0},note:"taper"}} },
   { id:"botanicare_calmag",name:"Cal-Mag Plus",brand:"Botanicare",category:"cal-mag",tapWaterWarning:true,waterBoost:{ro:1.25,soft:1.0,tap:0.5},mixOrder:1,conflicts:["calimagic"],
-    stageRules:{seedling:{dose:1.0,note:"conservative"},early_growth:{dose:2.5},late_growth:{dose:4.0},early_bloom:{dose:4.0},mid_late_bloom:{dose:2.0,note:"taper"},mid_bloom:{dose:2.0},late_bloom:{dose:1.5,note:"taper"}} },
+    stageRules:{seedling:{dose:1.0,note:"conservative"},early_growth:{dose:2.5},late_growth:{dose:4.0},early_flower:{dose:4.0},late_flower:{dose:2.0,note:"taper"},late_flower:{dose:2.0},late_flower:{dose:1.5,note:"taper"}} },
   { id:"armor_si",name:"Armor Si",brand:"Gen. Hydroponics",category:"silica",waterBoost:{ro:1.0,soft:1.0,tap:1.0},mixOrder:0,conflicts:["protekt","silica_blast"],
-    stageRules:{seedling:{dose:1.25,note:"half strength"},early_growth:{dose:2.5},late_growth:{dose:2.5},early_bloom:{dose:2.5},mid_late_bloom:{dose:2.5},mid_bloom:{dose:2.5},late_bloom:{dose:2.5}} },
+    stageRules:{seedling:{dose:1.25,note:"half strength"},early_growth:{dose:2.5},late_growth:{dose:2.5},early_flower:{dose:2.5},late_flower:{dose:2.5},late_flower:{dose:2.5},late_flower:{dose:2.5}} },
   { id:"protekt",name:"Pro-Tekt",brand:"Dyna-Gro",category:"silica",waterBoost:{ro:1.0,soft:1.0,tap:1.0},mixOrder:0,conflicts:["armor_si","silica_blast"],
-    stageRules:{seedling:{dose:1.0},early_growth:{dose:2.0},late_growth:{dose:2.0},early_bloom:{dose:2.0},mid_late_bloom:{dose:2.0},mid_bloom:{dose:2.0},late_bloom:{dose:2.0}} },
+    stageRules:{seedling:{dose:1.0},early_growth:{dose:2.0},late_growth:{dose:2.0},early_flower:{dose:2.0},late_flower:{dose:2.0},late_flower:{dose:2.0},late_flower:{dose:2.0}} },
   { id:"silica_blast",name:"Silica Blast",brand:"Botanicare",category:"silica",waterBoost:{ro:1.0,soft:1.0,tap:1.0},mixOrder:0,conflicts:["armor_si","protekt"],
-    stageRules:{seedling:{dose:1.0},early_growth:{dose:2.5},late_growth:{dose:5.0},early_bloom:{dose:2.5,note:"reduce at bloom"},mid_late_bloom:{dose:2.5},mid_bloom:{dose:2.5},late_bloom:{dose:2.5}} },
+    stageRules:{seedling:{dose:1.0},early_growth:{dose:2.5},late_growth:{dose:5.0},early_flower:{dose:2.5,note:"reduce at bloom"},late_flower:{dose:2.5},late_flower:{dose:2.5},late_flower:{dose:2.5}} },
   { id:"hydroguard",name:"Hydroguard",brand:"Botanicare",category:"root",waterBoost:{ro:1.0,soft:1.0,tap:1.0},mixOrder:8,conflicts:[],
-    stageRules:{seedling:{dose:2.0,note:"start early"},early_growth:{dose:2.0},late_growth:{dose:2.0},early_bloom:{dose:2.0},mid_late_bloom:{dose:2.0},mid_bloom:{dose:2.0},late_bloom:{dose:2.0}} },
+    stageRules:{seedling:{dose:2.0,note:"start early"},early_growth:{dose:2.0},late_growth:{dose:2.0},early_flower:{dose:2.0},late_flower:{dose:2.0},late_flower:{dose:2.0},late_flower:{dose:2.0}} },
   { id:"mammoth_p",name:"Mammoth P",brand:"Growcentia",category:"root",waterBoost:{ro:1.0,soft:1.0,tap:1.0},mixOrder:8,conflicts:[],
-    stageRules:{early_growth:{dose:0.5},late_growth:{dose:0.5},early_bloom:{dose:1.0,note:"increase at flip"},mid_late_bloom:{dose:1.0},mid_bloom:{dose:1.0},late_bloom:{dose:0.5}} },
+    stageRules:{early_growth:{dose:0.5},late_growth:{dose:0.5},early_flower:{dose:1.0,note:"increase at flip"},late_flower:{dose:1.0},late_flower:{dose:1.0},late_flower:{dose:0.5}} },
   { id:"koolbloom_liquid",name:"Liquid KoolBloom",brand:"Gen. Hydroponics",category:"pk-booster",waterBoost:{ro:1.0,soft:1.0,tap:1.0},mixOrder:6,conflicts:["koolbloom_dry"],
-    stageRules:{early_bloom:{dose:{light:1.0,medium:1.0,aggressive:1.0}},mid_late_bloom:{dose:{light:1.0,medium:1.9,aggressive:2.0}},mid_bloom:{dose:{light:1.0,medium:1.9,aggressive:2.0}},late_bloom:{dose:{light:1.0,medium:1.5,aggressive:1.5}}} },
+    stageRules:{early_flower:{dose:{light:1.0,medium:1.0,aggressive:1.0}},late_flower:{dose:{light:1.0,medium:1.9,aggressive:2.0}},late_flower:{dose:{light:1.0,medium:1.9,aggressive:2.0}},late_flower:{dose:{light:1.0,medium:1.5,aggressive:1.5}}} },
   { id:"koolbloom_dry",name:"KoolBloom Dry",brand:"Gen. Hydroponics",category:"pk-booster",waterBoost:{ro:1.0,soft:1.0,tap:1.0},mixOrder:6,conflicts:["koolbloom_liquid"],unit:"g",
-    stageRules:{mid_late_bloom:{dose:2.0,note:"final 1-2 weeks"},late_bloom:{dose:2.0,note:"final 1-2 weeks"}} },
+    stageRules:{late_flower:{dose:2.0,note:"final 1-2 weeks"},late_flower:{dose:2.0,note:"final 1-2 weeks"}} },
   { id:"bud_candy",name:"Bud Candy",brand:"Adv. Nutrients",category:"pk-booster",waterBoost:{ro:1.0,soft:1.0,tap:1.0},mixOrder:6,conflicts:[],
-    stageRules:{early_bloom:{dose:4.0},mid_late_bloom:{dose:4.0},mid_bloom:{dose:4.0},late_bloom:{dose:4.0}} },
+    stageRules:{early_flower:{dose:4.0},late_flower:{dose:4.0},late_flower:{dose:4.0},late_flower:{dose:4.0}} },
   { id:"ful_power",name:"Ful-Power",brand:"BioAg",category:"fulvic-humic",waterBoost:{ro:1.0,soft:1.0,tap:1.0},mixOrder:5,conflicts:[],
-    stageRules:{seedling:{dose:1.0,note:"dilute well"},early_growth:{dose:2.5},late_growth:{dose:2.5},early_bloom:{dose:2.5},mid_late_bloom:{dose:1.5},mid_bloom:{dose:1.5},late_bloom:{dose:1.0},ripen:{dose:1.0}} },
+    stageRules:{seedling:{dose:1.0,note:"dilute well"},early_growth:{dose:2.5},late_growth:{dose:2.5},early_flower:{dose:2.5},late_flower:{dose:1.5},late_flower:{dose:1.5},late_flower:{dose:1.0},late_flower:{dose:1.0}} },
   { id:"slf100",name:"SLF-100",brand:"Organitek",category:"enzyme",waterBoost:{ro:1.0,soft:1.0,tap:1.0},mixOrder:8,conflicts:["cannazym"],
-    stageRules:{seedling:{dose:1.0},early_growth:{dose:2.0},late_growth:{dose:2.0},early_bloom:{dose:2.0},mid_late_bloom:{dose:2.0},mid_bloom:{dose:2.0},late_bloom:{dose:2.0}} },
+    stageRules:{seedling:{dose:1.0},early_growth:{dose:2.0},late_growth:{dose:2.0},early_flower:{dose:2.0},late_flower:{dose:2.0},late_flower:{dose:2.0},late_flower:{dose:2.0}} },
   { id:"cannazym",name:"Cannazym",brand:"Canna",category:"enzyme",waterBoost:{ro:1.0,soft:1.0,tap:1.0},mixOrder:8,conflicts:["slf100"],
-    stageRules:{seedling:{dose:2.5},early_growth:{dose:5.0},late_growth:{dose:5.0},early_bloom:{dose:5.0},mid_late_bloom:{dose:5.0},mid_bloom:{dose:5.0},late_bloom:{dose:5.0}} },
+    stageRules:{seedling:{dose:2.5},early_growth:{dose:5.0},late_growth:{dose:5.0},early_flower:{dose:5.0},late_flower:{dose:5.0},late_flower:{dose:5.0},late_flower:{dose:5.0}} },
   { id:"recharge",name:"Recharge",brand:"Real Growers",category:"beneficial",waterBoost:{ro:1.0,soft:1.0,tap:1.0},mixOrder:9,unit:"g",conflicts:["great_white","orca"],
-    stageRules:{seedling:{dose:0.5},early_growth:{dose:1.0},late_growth:{dose:1.0},early_bloom:{dose:1.0},mid_late_bloom:{dose:1.0},mid_bloom:{dose:1.0},late_bloom:{dose:0.5}} },
+    stageRules:{seedling:{dose:0.5},early_growth:{dose:1.0},late_growth:{dose:1.0},early_flower:{dose:1.0},late_flower:{dose:1.0},late_flower:{dose:1.0},late_flower:{dose:0.5}} },
   { id:"great_white",name:"Great White",brand:"Plant Success",category:"beneficial",waterBoost:{ro:1.0,soft:1.0,tap:1.0},mixOrder:9,unit:"g",conflicts:["recharge","orca"],
-    stageRules:{seedling:{dose:0.5,note:"at transplant"},early_growth:{dose:0.5},late_growth:{dose:0.5},early_bloom:{dose:0.25,note:"reduce in flower"}} },
+    stageRules:{seedling:{dose:0.5,note:"at transplant"},early_growth:{dose:0.5},late_growth:{dose:0.5},early_flower:{dose:0.25,note:"reduce in flower"}} },
   { id:"orca",name:"Orca",brand:"Plant Success",category:"beneficial",waterBoost:{ro:1.0,soft:1.0,tap:1.0},mixOrder:9,conflicts:["recharge","great_white"],
-    stageRules:{seedling:{dose:1.0},early_growth:{dose:1.0},late_growth:{dose:2.0},early_bloom:{dose:2.0},mid_late_bloom:{dose:1.0},mid_bloom:{dose:1.0},late_bloom:{dose:0.5}} },
+    stageRules:{seedling:{dose:1.0},early_growth:{dose:1.0},late_growth:{dose:2.0},early_flower:{dose:2.0},late_flower:{dose:1.0},late_flower:{dose:1.0},late_flower:{dose:0.5}} },
   { id:"tps_sulfur",name:"TPS Sulfur",brand:"TPS Nutrients",category:"acidic",waterBoost:{ro:1.0,soft:1.0,tap:1.0},mixOrder:7,conflicts:[],precipitationWarning:true,
-    stageRules:{seedling:{dose:0.5,note:"very dilute"},early_growth:{dose:1.0},late_growth:{dose:1.0},early_bloom:{dose:1.0},mid_late_bloom:{dose:0.5,note:"reduce late bloom"},mid_bloom:{dose:0.5},late_bloom:{dose:0.25,note:"reduce late bloom"}} },
+    stageRules:{seedling:{dose:0.5,note:"very dilute"},early_growth:{dose:1.0},late_growth:{dose:1.0},early_flower:{dose:1.0},late_flower:{dose:0.5,note:"reduce late bloom"},late_flower:{dose:0.5},late_flower:{dose:0.25,note:"reduce late bloom"}} },
 ];
 
 // ─── LOGIC ───────────────────────────────────────────────────────────────────
@@ -543,15 +514,15 @@ function buildMixOrder(core,activeSupps,includedDoses={}){
 }
 
 const PLANT_MODIFIERS = {
-  tomatoes:    { ecCeiling:3.0, ecNote:"Tomatoes tolerate up to 3.0 mS/cm — heavy fruiting demands concentrated nutrition.", mods:[{bottle:"FloraMicro",dir:"↑",why:"Extra Ca prevents Blossom End Rot"},{bottle:"FloraBloom",dir:"↑",why:"Elevated K drives fruit swell and sugar loading"}], stages:{early_bloom:{micro:1.05,gro:1.00,bloom:1.08},mid_late_bloom:{micro:1.07,gro:1.00,bloom:1.12},mid_bloom:{micro:1.06,gro:1.00,bloom:1.10},late_bloom:{micro:1.07,gro:1.00,bloom:1.12},ripen:{micro:1.05,gro:0.90,bloom:1.05}} },
-  cannabis:    { ecCeiling:2.5, ecNote:"Standard 2.5 mS/cm ceiling. N-fade in bloom is intentional for resin production.", mods:[{bottle:"FloraGro",dir:"↓",why:"N-fade — excess N suppresses terpene expression"},{bottle:"FloraBloom",dir:"↑",why:"PK push drives resin and cannabinoid production"}], stages:{early_bloom:{micro:1.00,gro:0.90,bloom:1.05},mid_late_bloom:{micro:1.00,gro:0.82,bloom:1.10},mid_bloom:{micro:1.00,gro:0.85,bloom:1.08},late_bloom:{micro:1.00,gro:0.78,bloom:1.12},ripen:{micro:1.00,gro:0.70,bloom:1.05}} },
-  peppers:     { ecCeiling:2.8, ecNote:"Peppers tolerate up to 2.8 mS/cm with K-forward nutrition.", mods:[{bottle:"FloraGro",dir:"↓",why:"Low-N preference — high N reduces fruit set"},{bottle:"FloraBloom",dir:"↑",why:"K drives capsaicin and flavor depth"}], stages:{early_growth:{micro:1.00,gro:0.90,bloom:1.00},late_growth:{micro:1.00,gro:0.90,bloom:1.00},early_bloom:{micro:1.00,gro:0.85,bloom:1.07},mid_late_bloom:{micro:1.00,gro:0.80,bloom:1.10},mid_bloom:{micro:1.00,gro:0.82,bloom:1.08},late_bloom:{micro:1.00,gro:0.78,bloom:1.10},ripen:{micro:1.00,gro:0.70,bloom:1.05}} },
-  cucumbers:   { ecCeiling:2.0, ecNote:"Hard 2.0 mS/cm ceiling — cucumbers suffer osmotic stress above this.", mods:[{bottle:"FloraMicro",dir:"↓",why:"Salt-sensitive — doses lightened ~8%"},{bottle:"FloraGro",dir:"↓",why:"Reduced to protect root zone"},{bottle:"FloraBloom",dir:"↓",why:"Slight reduction; K still matters for fruit"}], stages:{early_growth:{micro:0.93,gro:0.93,bloom:0.93},late_growth:{micro:0.93,gro:0.93,bloom:0.93},early_bloom:{micro:0.92,gro:0.92,bloom:0.94},mid_late_bloom:{micro:0.91,gro:0.90,bloom:0.94},mid_bloom:{micro:0.91,gro:0.90,bloom:0.94},late_bloom:{micro:0.90,gro:0.88,bloom:0.93},ripen:{micro:0.90,gro:0.85,bloom:0.92}} },
+  tomatoes:    { ecCeiling:3.0, ecNote:"Tomatoes tolerate up to 3.0 mS/cm — heavy fruiting demands concentrated nutrition.", mods:[{bottle:"FloraMicro",dir:"↑",why:"Extra Ca prevents Blossom End Rot"},{bottle:"FloraBloom",dir:"↑",why:"Elevated K drives fruit swell and sugar loading"}], stages:{early_flower:{micro:1.05,gro:1.00,bloom:1.08},late_flower:{micro:1.07,gro:1.00,bloom:1.12},late_flower:{micro:1.06,gro:1.00,bloom:1.10},late_flower:{micro:1.07,gro:1.00,bloom:1.12},late_flower:{micro:1.05,gro:0.90,bloom:1.05}} },
+  cannabis:    { ecCeiling:2.5, ecNote:"Standard 2.5 mS/cm ceiling. N-fade in bloom is intentional for resin production.", mods:[{bottle:"FloraGro",dir:"↓",why:"N-fade — excess N suppresses terpene expression"},{bottle:"FloraBloom",dir:"↑",why:"PK push drives resin and cannabinoid production"}], stages:{early_flower:{micro:1.00,gro:0.90,bloom:1.05},late_flower:{micro:1.00,gro:0.82,bloom:1.10},late_flower:{micro:1.00,gro:0.85,bloom:1.08},late_flower:{micro:1.00,gro:0.78,bloom:1.12},late_flower:{micro:1.00,gro:0.70,bloom:1.05}} },
+  peppers:     { ecCeiling:2.8, ecNote:"Peppers tolerate up to 2.8 mS/cm with K-forward nutrition.", mods:[{bottle:"FloraGro",dir:"↓",why:"Low-N preference — high N reduces fruit set"},{bottle:"FloraBloom",dir:"↑",why:"K drives capsaicin and flavor depth"}], stages:{early_growth:{micro:1.00,gro:0.90,bloom:1.00},late_growth:{micro:1.00,gro:0.90,bloom:1.00},early_flower:{micro:1.00,gro:0.85,bloom:1.07},late_flower:{micro:1.00,gro:0.80,bloom:1.10},late_flower:{micro:1.00,gro:0.82,bloom:1.08},late_flower:{micro:1.00,gro:0.78,bloom:1.10},late_flower:{micro:1.00,gro:0.70,bloom:1.05}} },
+  cucumbers:   { ecCeiling:2.0, ecNote:"Hard 2.0 mS/cm ceiling — cucumbers suffer osmotic stress above this.", mods:[{bottle:"FloraMicro",dir:"↓",why:"Salt-sensitive — doses lightened ~8%"},{bottle:"FloraGro",dir:"↓",why:"Reduced to protect root zone"},{bottle:"FloraBloom",dir:"↓",why:"Slight reduction; K still matters for fruit"}], stages:{early_growth:{micro:0.93,gro:0.93,bloom:0.93},late_growth:{micro:0.93,gro:0.93,bloom:0.93},early_flower:{micro:0.92,gro:0.92,bloom:0.94},late_flower:{micro:0.91,gro:0.90,bloom:0.94},late_flower:{micro:0.91,gro:0.90,bloom:0.94},late_flower:{micro:0.90,gro:0.88,bloom:0.93},late_flower:{micro:0.90,gro:0.85,bloom:0.92}} },
   lettuce:     { ecCeiling:1.6, ecNote:"Hard 1.6 mS/cm ceiling — high EC causes tip burn in leafy crops.", mods:[{bottle:"FloraMicro",dir:"↓",why:"Light feeder — tip burn risk at high EC"},{bottle:"FloraGro",dir:"↓",why:"~70% of chart; leafy crops need gentle N"},{bottle:"FloraBloom",dir:"↓",why:"Minimal bloom nutrition needed"}], stages:{seedling:{micro:0.70,gro:0.70,bloom:0.70},early_growth:{micro:0.70,gro:0.72,bloom:0.65},late_growth:{micro:0.70,gro:0.72,bloom:0.65}} },
   herbs:       { ecCeiling:1.8, ecNote:"1.8 mS/cm ceiling — excess N dilutes essential oil content.", mods:[{bottle:"FloraMicro",dir:"↓",why:"Moderate feeder; excess causes rank growth"},{bottle:"FloraGro",dir:"↓",why:"High N dilutes essential oils in basil & herbs"}], stages:{seedling:{micro:0.80,gro:0.80,bloom:0.80},early_growth:{micro:0.80,gro:0.80,bloom:0.80},late_growth:{micro:0.80,gro:0.80,bloom:0.80}} },
-  strawberries:{ ecCeiling:2.2, ecNote:"2.2 mS/cm ceiling — K-forward nutrition with moderate EC.", mods:[{bottle:"FloraMicro",dir:"↑",why:"Extra Ca improves fruit firmness"},{bottle:"FloraBloom",dir:"↑",why:"K boosts Brix and shelf life"}], stages:{early_bloom:{micro:1.04,gro:0.95,bloom:1.08},mid_late_bloom:{micro:1.04,gro:0.90,bloom:1.10},mid_bloom:{micro:1.04,gro:0.92,bloom:1.09},late_bloom:{micro:1.04,gro:0.88,bloom:1.10}} },
-  roses:       { ecCeiling:2.3, ecNote:"2.3 mS/cm ceiling — moderate-heavy feeder with good EC tolerance.", mods:[{bottle:"FloraGro",dir:"↑",why:"Elevated N for strong cane development"},{bottle:"FloraBloom",dir:"↑",why:"K drives petal count and fragrance"}], stages:{early_growth:{micro:1.00,gro:1.08,bloom:1.00},late_growth:{micro:1.00,gro:1.08,bloom:1.00},early_bloom:{micro:1.00,gro:1.00,bloom:1.06},mid_late_bloom:{micro:1.00,gro:0.95,bloom:1.10},mid_bloom:{micro:1.00,gro:0.97,bloom:1.08},late_bloom:{micro:1.00,gro:0.92,bloom:1.10}} },
-  orchids:     { ecCeiling:1.0, ecNote:"Hard 1.0 mS/cm ceiling — extremely salt-sensitive. Dilute feeds only.", mods:[{bottle:"FloraMicro",dir:"↓",why:"\"Weakly, weekly\" — scaled to ~45% of chart"},{bottle:"FloraGro",dir:"↓",why:"Epiphytes adapted to nutrient-poor environments"},{bottle:"FloraBloom",dir:"↓",why:"Over-fertilization is the #1 cause of orchid death"}], stages:{seedling:{micro:0.45,gro:0.45,bloom:0.45},early_growth:{micro:0.45,gro:0.45,bloom:0.45},early_bloom:{micro:0.45,gro:0.40,bloom:0.50},mid_late_bloom:{micro:0.45,gro:0.38,bloom:0.50},mid_bloom:{micro:0.45,gro:0.38,bloom:0.50},late_bloom:{micro:0.45,gro:0.35,bloom:0.50}} },
+  strawberries:{ ecCeiling:2.2, ecNote:"2.2 mS/cm ceiling — K-forward nutrition with moderate EC.", mods:[{bottle:"FloraMicro",dir:"↑",why:"Extra Ca improves fruit firmness"},{bottle:"FloraBloom",dir:"↑",why:"K boosts Brix and shelf life"}], stages:{early_flower:{micro:1.04,gro:0.95,bloom:1.08},late_flower:{micro:1.04,gro:0.90,bloom:1.10},late_flower:{micro:1.04,gro:0.92,bloom:1.09},late_flower:{micro:1.04,gro:0.88,bloom:1.10}} },
+  roses:       { ecCeiling:2.3, ecNote:"2.3 mS/cm ceiling — moderate-heavy feeder with good EC tolerance.", mods:[{bottle:"FloraGro",dir:"↑",why:"Elevated N for strong cane development"},{bottle:"FloraBloom",dir:"↑",why:"K drives petal count and fragrance"}], stages:{early_growth:{micro:1.00,gro:1.08,bloom:1.00},late_growth:{micro:1.00,gro:1.08,bloom:1.00},early_flower:{micro:1.00,gro:1.00,bloom:1.06},late_flower:{micro:1.00,gro:0.95,bloom:1.10},late_flower:{micro:1.00,gro:0.97,bloom:1.08},late_flower:{micro:1.00,gro:0.92,bloom:1.10}} },
+  orchids:     { ecCeiling:1.0, ecNote:"Hard 1.0 mS/cm ceiling — extremely salt-sensitive. Dilute feeds only.", mods:[{bottle:"FloraMicro",dir:"↓",why:"\"Weakly, weekly\" — scaled to ~45% of chart"},{bottle:"FloraGro",dir:"↓",why:"Epiphytes adapted to nutrient-poor environments"},{bottle:"FloraBloom",dir:"↓",why:"Over-fertilization is the #1 cause of orchid death"}], stages:{seedling:{micro:0.45,gro:0.45,bloom:0.45},early_growth:{micro:0.45,gro:0.45,bloom:0.45},early_flower:{micro:0.45,gro:0.40,bloom:0.50},late_flower:{micro:0.45,gro:0.38,bloom:0.50},late_flower:{micro:0.45,gro:0.38,bloom:0.50},late_flower:{micro:0.45,gro:0.35,bloom:0.50}} },
   houseplants: { ecCeiling:1.8, ecNote:"1.8 mS/cm ceiling — slow-growing light feeders by nature.", mods:[{bottle:"FloraMicro",dir:"↓",why:"Gentle, dilute nutrition needed"},{bottle:"FloraGro",dir:"↓",why:"~65% of chart — excess causes salt buildup"}], stages:{seedling:{micro:0.65,gro:0.65,bloom:0.65},early_growth:{micro:0.65,gro:0.65,bloom:0.65},late_growth:{micro:0.65,gro:0.65,bloom:0.65}} },
 };
 
@@ -559,9 +530,9 @@ const PLANT_MODIFIERS = {
 // Returns { level: "recommended"|"optional"|"skip", reason: string }
 // Based on plant type, growth stage, and agronomic best-practice.
 
-const BLOOM_STAGES = new Set(["early_bloom","mid_late_bloom","mid_bloom","late_bloom","ripen"]);
+const BLOOM_STAGES = new Set(["early_flower","late_flower"]);
 const VEG_STAGES   = new Set(["seedling","early_growth","late_growth"]);
-const ROOT_STAGES  = new Set(["seedling","early_growth","late_growth","early_bloom"]);
+const ROOT_STAGES  = new Set(["seedling","early_growth","late_growth","early_flower"]);
 
 // Per-plant supplement affinities
 const PLANT_SUPP_PROFILE = {
@@ -695,8 +666,8 @@ const REC_REASONS = {
 const STAGE_OVERRIDES = {
   // Root products drop off in late bloom
   root: {
-    mid_late_bloom:{ level:"optional", reason:"Root inoculants less impactful in late bloom; use if already established" },
-    late_bloom:    { level:"optional", reason:"Root colonization already established; optional maintenance dose" },
+    late_flower:{ level:"optional", reason:"Root inoculants less impactful in late bloom; use if already established" },
+
     ripen:         { level:"skip",     reason:"Skip in final weeks — microbial inoculants not useful at flush" },
     flush:         { level:"skip",     reason:"Flush only — no supplements" },
   },
@@ -704,17 +675,17 @@ const STAGE_OVERRIDES = {
   pk: {
     seedling:      { level:"skip",     reason:"Too early — PK boosters are for flowering stages only" },
     early_growth:  { level:"skip",     reason:"Not needed in veg — can cause early lock-out" },
-    late_growth:   { level:"skip",     reason:"Hold off until flip to bloom" },
+    late_growth:   { level:"skip",     reason:"Hold off until flip to flower" },
     flush:         { level:"skip",     reason:"Flush only" },
   },
   // Cal-Mag less needed in flush
   calMag: {
+    late_flower:   { level:"optional", reason:"Taper Ca/Mg in late flower — use at reduced dose" },
     flush:         { level:"skip",     reason:"Flush only — no supplements" },
-    ripen:         { level:"optional", reason:"Taper Ca/Mg in final weeks" },
   },
   // Silica not in flush or ripen
   silica: {
-    ripen:         { level:"optional", reason:"Can continue but not critical in ripening" },
+    late_flower:   { level:"optional", reason:"Can continue but not critical in late flower" },
     flush:         { level:"skip",     reason:"Flush only" },
   },
   // Enzymes always useful except flush
@@ -723,8 +694,7 @@ const STAGE_OVERRIDES = {
   },
   // Fulvic/humic less needed late
   fulvic: {
-    late_bloom:    { level:"optional", reason:"Less benefit in final weeks; optional" },
-    ripen:         { level:"optional", reason:"Minor benefit; use at reduced dose" },
+    late_flower:   { level:"optional", reason:"Minor benefit in late flower; use at reduced dose" },
     flush:         { level:"skip",     reason:"Flush only" },
   },
   // Sulfur bloom-focus
@@ -754,6 +724,7 @@ function getSuppRec(supp, plantId, stageId) {
 // ─── APP ─────────────────────────────────────────────────────────────────────
 export default function FloraApp() {
   const [brand,     setBrand]     = useState(null); // "classic" | "florapro"
+  const [photoperiod, setPhotoperiod] = useState(null); // "18h"|"12h"
   const [system,    setSystem]    = useState(null);
   const [plant,     setPlant]     = useState(null);
   const [stage,     setStage]     = useState(null);
@@ -787,7 +758,7 @@ export default function FloraApp() {
     const p=PLANTS.find(x=>x.id===plant),s=STAGE_META[stage];
     const name=saveName.trim()||`${p?.icon} ${p?.name} · ${s?.label} · ${volume} ${unit}`;
     const id=`run:${Date.now()}`;
-    const run={id,name,system,plant,stage,strength,volume,unit,water,supps:[...supps],savedAt:Date.now()};
+    const run={id,name,system,plant,stage,strength,volume,unit,water,photoperiod,supps:[...supps],savedAt:Date.now()};
     try{await window.storage.set(id,JSON.stringify(run));setSaveStatus("saved");setSavePrompt(false);setSaveName("");setTimeout(()=>setSaveStatus(null),2500);loadRuns();}catch{setSaveStatus("error");}
   };
   const handleDelete = async(id)=>{try{await window.storage.delete(id);setConfirmDel(null);loadRuns();}catch{}};
@@ -795,7 +766,7 @@ export default function FloraApp() {
     const sys=run.system||"3part";
     const br=sys.startsWith("florapro")?"florapro":sys.startsWith("biothrive")?"biothrive":sys.startsWith("maxi")?"maxi":sys.startsWith("floranvoa")?"floranvoa":"classic";
     setBrand(br);setSystem(sys);setPlant(run.plant);setStage(run.stage);
-    setStrength(run.strength);setVolume(run.volume);setUnit(run.unit);
+    setPhotoperiod(run.photoperiod||null);setStrength(run.strength);setVolume(run.volume);setUnit(run.unit);
     setWater(run.water);setSupps(new Set(run.supps));setStep(targetStep);
   };
 
@@ -826,22 +797,33 @@ export default function FloraApp() {
   const mixSteps    = useMemo(()=>core?buildMixOrder(core,suppData.filter(s=>s.active),included):[],[core,suppData,included]);
 
   const toggleSupp = id=>setSupps(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});
+  // Photoperiod affinity for each stage
+  const STAGE_PHOTO = {
+    seedling:"18h", early_growth:"18h", late_growth:"18h",
+    early_flower:"12h", late_flower:"12h",
+    flush:"any",
+  };
+
   const avail = useMemo(()=>{
     if(!plantObj||!sysCfg)return[];
     const ss=new Set(sysCfg.stages);
-    return plantObj.maxStages.filter(s=>ss.has(s)).map(s=>({id:s,...STAGE_META[s]}));
-  },[plantObj,sysCfg]);
+    return plantObj.maxStages
+      .filter(s=>ss.has(s))
+      .filter(s=>!photoperiod||(STAGE_PHOTO[s]||"any")==="any"||(STAGE_PHOTO[s]===photoperiod))
+      .map(s=>({id:s,...STAGE_META[s]}));
+  },[plantObj,sysCfg,photoperiod]);
 
   const hasResults = core&&plantObj&&stageObj;
-  const steps = ["Brand","System","Plant","Stage","Settings","Supps","Results"];
+  const steps = ["Brand","System","Plant","Photo","Stage","Settings","Supps","Results"];
   const goTo=(i)=>{
     if(i===0)setStep(0);
     else if(i===1&&brand)setStep(1);
     else if(i===2&&system)setStep(2);
     else if(i===3&&plant)setStep(3);
-    else if(i===4&&stage)setStep(4);
+    else if(i===4&&photoperiod)setStep(4);
     else if(i===5&&stage)setStep(5);
-    else if(i===6&&hasResults)setStep(6);
+    else if(i===6&&stage)setStep(6);
+    else if(i===7&&hasResults)setStep(7);
   };
 
   // ── GH BRAND DESIGN TOKENS ──────────────────────────────────────────────
@@ -887,8 +869,8 @@ export default function FloraApp() {
                   </div>
                   {!isConf?(
                     <div style={{display:"flex",borderTop:`1px solid ${GH.border}`}}>
-                      <button onClick={()=>loadRun(run,6)} style={runBtn(GH.green)}>▶ LOAD</button>
-                      <button onClick={()=>loadRun(run,4)} style={{...runBtn(GH.blue),borderLeft:`1px solid ${GH.border}`}}>✎ MODIFY</button>
+                      <button onClick={()=>loadRun(run,7)} style={runBtn(GH.green)}>▶ LOAD</button>
+                      <button onClick={()=>loadRun(run,5)} style={{...runBtn(GH.blue),borderLeft:`1px solid ${GH.border}`}}>✎ MODIFY</button>
                       <button onClick={()=>setConfirmDel(run.id)} style={{...runBtn("#e05050"),borderLeft:`1px solid ${GH.border}`}}>✕ DELETE</button>
                     </div>
                   ):(
@@ -1033,7 +1015,7 @@ export default function FloraApp() {
             const sel=plant===p.id;
             const stgCount=p.maxStages.filter(s=>sysCfg?.stages.includes(s)).length;
             return (
-              <button key={p.id} onClick={()=>{setPlant(p.id);setStage(null);setSupps(new Set());setStep(3);}}
+              <button key={p.id} onClick={()=>{setPlant(p.id);setStage(null);setPhotoperiod(null);setSupps(new Set());setStep(3);}}
                 style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"20px 12px",background:sel?`linear-gradient(135deg,${GH.green}20,${GH.green}08)`:GH.card,border:`1px solid ${sel?GH.green:GH.border}`,cursor:"pointer",textAlign:"center",position:"relative",transition:"all 0.15s"}}>
                 {sel&&<div style={{position:"absolute",top:0,left:0,right:0,height:3,background:GH.green}}/>}
                 <span style={{fontSize:36,marginBottom:8}}>{p.icon}</span>
@@ -1046,18 +1028,54 @@ export default function FloraApp() {
       </div>
     );
 
-    // ── STEP 3: STAGE ───────────────────────────────────────────────────────
-    if(step===3) return (
+    // ── STEP 3: PHOTOPERIOD ─────────────────────────────────────────────────
+    if(step===3) {
+      // Determine if this system uses photoperiod-specific stages
+      const sysHasPhoto = avail.some(s=>(STAGE_PHOTO[s.id]||"any")!=="any");
+      return (
+        <div>
+          <div style={sectionLabel()}>LIGHT SCHEDULE</div>
+          <div style={{fontSize:12,color:GH.muted,fontFamily:"'DM Sans',sans-serif",marginBottom:20,lineHeight:1.6}}>
+            {sysHasPhoto
+              ? "Select your current photoperiod. This filters your available growth stages."
+              : "This system uses the same stages regardless of photoperiod. Select your schedule for the record."}
+          </div>
+          {[
+            {value:"18h", icon:"☀️", label:"18 Hours", sub:"Vegetative · Long day"},
+            {value:"12h", icon:"🌙", label:"12 Hours", sub:"Bloom · Short day"},
+          ].map(opt=>{
+            const sel=photoperiod===opt.value;
+            return (
+              <button key={opt.value} onClick={()=>{setPhotoperiod(opt.value);setStage(null);setStep(4);}}
+                style={{display:"flex",alignItems:"center",gap:16,width:"100%",marginBottom:10,padding:"22px 20px",background:sel?`${GH.green}18`:GH.card,border:`1px solid ${sel?GH.green:GH.border}`,cursor:"pointer",textAlign:"left",transition:"all 0.15s",position:"relative"}}>
+                {sel&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:4,background:GH.green}}/>}
+                <span style={{fontSize:40}}>{opt.icon}</span>
+                <div style={{paddingLeft:sel?4:0}}>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,fontWeight:900,color:sel?GH.green:GH.text,textTransform:"uppercase",letterSpacing:"0.06em"}}>{opt.label}</div>
+                  <div style={{fontSize:12,color:GH.dim,fontFamily:"'DM Sans',sans-serif",marginTop:2}}>{opt.sub}</div>
+                </div>
+                {sel&&<span style={{marginLeft:"auto",color:GH.green,fontSize:22,fontWeight:700}}>→</span>}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // ── STEP 4: STAGE ───────────────────────────────────────────────────────
+    if(step===4) return (
       <div>
         <div style={sectionLabel()}>GROWTH STAGE</div>
         {avail.map(s=>{
           const sel=stage===s.id;
+          // Strip photoperiod suffix from label since user already chose it
+          const cleanLabel = s.label.replace(/ \((18|12)H\)/g,"").trim();
           return (
-            <button key={s.id} onClick={()=>{setStage(s.id);setStep(4);}}
+            <button key={s.id} onClick={()=>{setStage(s.id);setStep(5);}}
               style={{display:"flex",alignItems:"center",gap:14,width:"100%",marginBottom:8,padding:"16px 18px",background:sel?`${s.color}18`:GH.card,border:`1px solid ${sel?s.color:GH.border}`,cursor:"pointer",textAlign:"left",transition:"all 0.15s"}}>
               <div style={{width:14,height:14,borderRadius:"50%",background:s.color,flexShrink:0,boxShadow:sel?`0 0 12px ${s.color}88`:"none"}}/>
               <div style={{flex:1}}>
-                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:17,fontWeight:700,color:sel?s.color:GH.text,textTransform:"uppercase",letterSpacing:"0.04em"}}>{s.label}</div>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:17,fontWeight:700,color:sel?s.color:GH.text,textTransform:"uppercase",letterSpacing:"0.04em"}}>{cleanLabel}</div>
                 <div style={{fontSize:11,color:GH.dim,marginTop:2,fontFamily:"'DM Sans',sans-serif"}}>{s.desc}</div>
               </div>
               {sel&&<span style={{color:s.color,fontSize:20,fontWeight:700}}>→</span>}
@@ -1067,8 +1085,8 @@ export default function FloraApp() {
       </div>
     );
 
-    // ── STEP 4: SETTINGS ────────────────────────────────────────────────────
-    if(step===4) return (
+    // ── STEP 5: SETTINGS ────────────────────────────────────────────────────
+    if(step===5) return (
       <div>
         <div style={sectionLabel()}>RESERVOIR VOLUME</div>
         <div style={{display:"flex",alignItems:"center",background:GH.card,border:`1px solid ${GH.border}`,overflow:"hidden",marginBottom:8}}>
@@ -1114,12 +1132,12 @@ export default function FloraApp() {
             </button>
           );
         })}
-        <button onClick={()=>setStep(5)} style={ghPrimaryBtn()}>NEXT: SUPPLEMENTS →</button>
+        <button onClick={()=>setStep(6)} style={ghPrimaryBtn()}>NEXT: SUPPLEMENTS →</button>
       </div>
     );
 
-    // ── STEP 5: SUPPLEMENTS ─────────────────────────────────────────────────
-    if(step===5) {
+    // ── STEP 6: SUPPLEMENTS ─────────────────────────────────────────────────
+    if(step===6) {
       // Group suppData by category, sorted by CAT_META order
       const catOrder = Object.entries(CAT_META).sort((a,b)=>a[1].order-b[1].order).map(([k])=>k);
       const grouped = catOrder.map(catId => {
@@ -1223,13 +1241,13 @@ export default function FloraApp() {
               )}
             </div>
           ))}
-          {hasResults&&<button onClick={()=>setStep(6)} style={ghPrimaryBtn()}>VIEW FEEDING SCHEDULE →</button>}
+          {hasResults&&<button onClick={()=>setStep(7)} style={ghPrimaryBtn()}>VIEW FEEDING SCHEDULE →</button>}
         </div>
       );
     }
 
-    // ── STEP 6: RESULTS ─────────────────────────────────────────────────────
-    if(step===6) return (
+    // ── STEP 7: RESULTS ─────────────────────────────────────────────────────
+    if(step===7) return (
       <div>
         {/* Context bar */}
         <div style={{background:GH.card,border:`1px solid ${GH.border}`,borderLeft:`4px solid ${sysCfg?.color||GH.green}`,padding:"12px 16px",marginBottom:12}}>
