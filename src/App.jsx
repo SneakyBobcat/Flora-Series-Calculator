@@ -1332,16 +1332,50 @@ export default function FloraApp() {
           </div>
         )}
 
-        {/* Plant modifier banner — liquid systems only, when modifier is active */}
-        {!sysCfg?.isPowder&&usePlantMod&&plantModMeta?.mods&&plantMod&&(
-          <div style={{background:GH.card,border:`1px solid ${GH.green}44`,borderLeft:`4px solid ${GH.green}`,padding:"12px 16px",marginBottom:12}}>
-            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,color:GH.green,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:8}}>{plantObj.icon} {plantObj.name} — DOSE ADJUSTMENTS ACTIVE</div>
-            {plantModMeta.mods.map((m,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:i<plantModMeta.mods.length-1?6:0}}>
-                <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,fontWeight:800,flexShrink:0,color:m.dir==="↑"?GH.green:GH.orange,background:m.dir==="↑"?"rgba(120,190,32,0.12)":"rgba(247,148,29,0.12)",border:`1px solid ${m.dir==="↑"?"rgba(120,190,32,0.3)":"rgba(247,148,29,0.3)"}`,padding:"2px 8px"}}>{m.bottle} {m.dir}</span>
-                <span style={{fontSize:12,color:GH.muted,fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>{m.why}</span>
+        {/* Plant modifier info box — Classic liquid systems only */}
+        {!sysCfg?.isPowder&&plantModMeta&&(
+          <div style={{background:GH.card,border:`1px solid ${usePlantMod?GH.green+"55":"#ccc"}`,borderLeft:`4px solid ${usePlantMod?GH.green:"#ccc"}`,marginBottom:12,overflow:"hidden"}}>
+            {/* Header */}
+            <div style={{padding:"12px 16px",borderBottom:`1px solid ${usePlantMod?GH.green+"22":GH.border}`}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:18}}>{plantObj.icon}</span>
+                  <div>
+                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,fontWeight:800,color:usePlantMod?GH.green:GH.dim,letterSpacing:"0.12em",textTransform:"uppercase"}}>
+                      {plantObj.name} — Plant Modifiers
+                    </div>
+                    <div style={{fontSize:10,color:GH.dim,fontFamily:"'DM Sans',sans-serif",marginTop:1}}>
+                      EC ceiling: <span style={{color:usePlantMod?GH.orange:GH.dim,fontWeight:600}}>{plantModMeta.ecCeiling} mS/cm</span>
+                    </div>
+                  </div>
+                </div>
+                <span style={{fontSize:11,fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,letterSpacing:"0.1em",color:usePlantMod?GH.green:"#aaa",background:usePlantMod?`${GH.green}18`:"#f0f0f0",border:`1px solid ${usePlantMod?GH.green+"44":"#ddd"}`,padding:"3px 10px"}}>
+                  {usePlantMod?"ACTIVE":"OFF"}
+                </span>
               </div>
-            ))}
+              {plantModMeta.ecNote&&<div style={{fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif",marginTop:8,lineHeight:1.5,fontStyle:"italic"}}>{plantModMeta.ecNote}</div>}
+            </div>
+
+            {/* Modifier rows */}
+            {usePlantMod?(
+              <div style={{padding:"10px 16px"}}>
+                {plantModMeta.mods.map((m,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:i<plantModMeta.mods.length-1?8:0}}>
+                    <div style={{flexShrink:0,display:"flex",alignItems:"center",gap:6}}>
+                      <div style={{width:8,height:8,borderRadius:"50%",background:m.dir==="↑"?GH.green:GH.orange,marginTop:3}}/>
+                      <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,fontWeight:800,color:m.dir==="↑"?GH.green:GH.orange,whiteSpace:"nowrap"}}>
+                        {m.bottle} {m.dir}
+                      </span>
+                    </div>
+                    <span style={{fontSize:11,color:GH.muted,fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>{m.why}</span>
+                  </div>
+                ))}
+              </div>
+            ):(
+              <div style={{padding:"10px 16px"}}>
+                <div style={{fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif",fontStyle:"italic"}}>Plant modifiers are off — using standard chart doses. Turn on from the Brand page to apply crop-specific adjustments.</div>
+              </div>
+            )}
           </div>
         )}
 

@@ -16,11 +16,12 @@ Mobile-first Progressive Web App for General Hydroponics nutrient systems.
 
 - 9-step wizard: Medium → Brand → System → Plant → Photoperiod → Stage → Settings → Supplements → Results
 - Substrate-aware dosing — Hydroponics / Inert / Potting Soil / Ground Soil
-- Plant modifier toggle on Classic brand — enable/disable crop-specific dose adjustments
+- Plant modifier toggle on Classic — enable/disable crop-specific dose adjustments
+- Plant modifier info box on Results — shows EC ceiling, adjustments, and agronomic reasons per crop
 - Water source calibration — Tap, Soft, RO/DI
 - Light / Medium / Aggressive feed strength tiers
 - EC budget with per-plant ceiling alerts
-- Optional supplement recommendations (8 categories)
+- Optional supplement recommendations (8 categories, collapsible)
 - Always-visible mixing order with numbered product rows
 - Direct gram totals for dry concentrate systems
 - Substrate-specific pH targets
@@ -33,7 +34,7 @@ Mobile-first Progressive Web App for General Hydroponics nutrient systems.
 1. Create a repo at **github.com**
 2. Upload all files from this folder into the repo
 
-### 2 — Deploy on Netlify
+### 2 — Connect to Netlify
 1. Sign in at **netlify.com** with GitHub
 2. **Add new site → Import an existing project → GitHub**
 3. Select your repo — `netlify.toml` handles build settings automatically
@@ -45,7 +46,7 @@ Mobile-first Progressive Web App for General Hydroponics nutrient systems.
 
 1. Open the live URL in **Safari**
 2. Tap **Share → Add to Home Screen**
-3. Tap **Add** — runs full-screen offline like a native app
+3. Tap **Add** — runs full-screen, works offline
 
 ---
 
