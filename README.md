@@ -15,14 +15,14 @@ Mobile-first Progressive Web App for General Hydroponics nutrient systems.
 ## Features
 
 - 8-step wizard: Medium → Brand → System → Plant → Stage → Settings → Supplements → Results
-- 7 growth stages: Seedling · Early Growth · Late Growth · Early Flower · Peak Flower · Late Flower · Flush
+- 7 growth stages including Peak Flower for fruiting crops
+- FloraKleen included in 10-Part and FloraNova 8-Part flush stage
+- Optional supplements active for all stages including Peak Flower
 - Substrate-aware dosing — Hydroponics / Inert / Potting Soil / Ground Soil
 - Plant modifier toggle on Classic — enable/disable crop-specific dose adjustments
-- Plant modifier info box on Results — EC ceiling, adjustments, and agronomic reasoning per crop
-- Feed strength descriptions: Hot/dry · Normal · Cool/humid conditions
 - Water source calibration — Tap, Soft, RO/DI
+- Light / Medium / Aggressive feed strength tiers
 - EC budget with per-plant ceiling alerts
-- Optional supplement recommendations (8 categories, collapsible)
 - Always-visible mixing order with numbered product rows
 - Direct gram totals for dry concentrate systems
 - Substrate-specific pH targets
