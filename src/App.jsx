@@ -380,9 +380,9 @@ const SUPP_EC_PER_ML_GAL = {
 };
 
 const STRENGTH_META = {
-  light:      { label:"Light",      color:"#00AEEF", desc:"New growers · soft water" },
-  medium:     { label:"Medium",     color:"#78BE20", desc:"Established plants · general" },
-  aggressive: { label:"Aggressive", color:"#F7941D", desc:"Heavy feeders · experienced" },
+  light:      { label:"Light",      color:"#00AEEF", desc:"Hot/dry weather · Young plants" },
+  medium:     { label:"Medium",     color:"#78BE20", desc:"Normal conditions · Established plants" },
+  aggressive: { label:"Aggressive", color:"#F7941D", desc:"Cool/humid weather · Heavy feeders" },
 };
 
 const CAT_META = {

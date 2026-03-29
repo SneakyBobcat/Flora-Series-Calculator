@@ -16,12 +16,11 @@ Mobile-first Progressive Web App for General Hydroponics nutrient systems.
 
 - 8-step wizard: Medium → Brand → System → Plant → Stage → Settings → Supplements → Results
 - 7 growth stages: Seedling · Early Growth · Late Growth · Early Flower · Peak Flower · Late Flower · Flush
-- Peak Flower stage for fruiting crops — captures maximum P/K demand and active swell period
 - Substrate-aware dosing — Hydroponics / Inert / Potting Soil / Ground Soil
 - Plant modifier toggle on Classic — enable/disable crop-specific dose adjustments
 - Plant modifier info box on Results — EC ceiling, adjustments, and agronomic reasoning per crop
+- Feed strength descriptions: Hot/dry · Normal · Cool/humid conditions
 - Water source calibration — Tap, Soft, RO/DI
-- Light / Medium / Aggressive feed strength tiers
 - EC budget with per-plant ceiling alerts
 - Optional supplement recommendations (8 categories, collapsible)
 - Always-visible mixing order with numbered product rows
