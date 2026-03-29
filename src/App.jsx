@@ -774,6 +774,7 @@ export default function FloraApp() {
   const [saveStatus,   setSaveStatus]   = useState(null);
   const [confirmDel,   setConfirmDel]   = useState(null);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [storageReady,  setStorageReady]   = useState(false);
 
   const loadRuns = async () => {
     try {
@@ -865,85 +866,42 @@ export default function FloraApp() {
 
   const renderStep = () => {
     // ── STEP 0: SUBSTRATE / MEDIUM ──────────────────────────────────────────
-    if(step===0) {
-      const SUBSTRATE_OPTIONS = [
-        { value:"hydro",   icon:"💧", label:"Hydroponics",  sub:"DWC · NFT · Aeroponics · Ebb & Flow",         mult:"Full chart dose" },
-        { value:"inert",   icon:"🪨", label:"Inert Medium",  sub:"Coco · Rockwool · Perlite · Clay pebbles",    mult:"90% of chart dose" },
-        { value:"potting", icon:"🪴", label:"Potting Soil",  sub:"Pre-amended mixes · Fox Farm · ProMix",       mult:"60% of chart dose" },
-        { value:"soil",    icon:"🌍", label:"Ground Soil",   sub:"Garden beds · native soil",                   mult:"40% of chart dose" },
-      ];
-      return (
-        <div>
-          <div style={sectionLabel()}>SELECT GROWING MEDIUM</div>
-          <div style={{fontSize:12,color:GH.muted,fontFamily:"'DM Sans',sans-serif",marginBottom:20,lineHeight:1.6}}>
-            Your growing medium affects how much nutrient your plants can access. Soil buffers and holds nutrition longer — hydroponic systems require the full chart dose.
-          </div>
-          {SUBSTRATE_OPTIONS.map(opt=>{
-            const sel=substrate===opt.value;
-            return (
-              <button key={opt.value} onClick={()=>{setSubstrate(opt.value);setStep(1);}}
-                style={{display:"flex",alignItems:"center",gap:16,width:"100%",marginBottom:10,padding:"18px 20px",background:sel?`${GH.green}18`:GH.card,border:`1px solid ${sel?GH.green:GH.border}`,cursor:"pointer",textAlign:"left",transition:"all 0.15s",position:"relative"}}>
-                {sel&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:4,background:GH.green}}/>}
-                <span style={{fontSize:36,flexShrink:0}}>{opt.icon}</span>
-                <div style={{flex:1,paddingLeft:sel?4:0}}>
-                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:sel?GH.green:GH.text,textTransform:"uppercase",letterSpacing:"0.05em"}}>{opt.label}</div>
-                  <div style={{fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif",marginTop:2}}>{opt.sub}</div>
-                </div>
-                <div style={{textAlign:"right",flexShrink:0}}>
-                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,color:sel?GH.green:GH.muted,letterSpacing:"0.08em"}}>{opt.mult}</div>
-                </div>
-              </button>
-            );
-          })}
-
-          {/* Legal Disclaimer Button */}
-          <div style={{marginTop:24,paddingTop:20,borderTop:`1px solid ${GH.border}`,textAlign:"center"}}>
-            <button onClick={()=>setShowDisclaimer(true)}
-              style={{background:"none",border:`1px solid ${GH.border}`,color:GH.dim,fontFamily:"'DM Sans',sans-serif",fontSize:12,padding:"10px 20px",cursor:"pointer",letterSpacing:"0.03em"}}>
-              ⚖ Legal Disclaimer
-            </button>
-          </div>
-
-          {/* Disclaimer Modal */}
-          {showDisclaimer&&(
-            <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.6)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
-              onClick={()=>setShowDisclaimer(false)}>
-              <div style={{background:"#fff",width:"100%",maxWidth:600,maxHeight:"85vh",overflowY:"auto",padding:"28px 24px 40px",borderRadius:"12px 12px 0 0"}}
-                onClick={e=>e.stopPropagation()}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:GH.text,letterSpacing:"0.05em",textTransform:"uppercase"}}>Legal Disclaimer</div>
-                  <button onClick={()=>setShowDisclaimer(false)} style={{background:"none",border:"none",fontSize:22,color:GH.dim,cursor:"pointer",lineHeight:1}}>✕</button>
-                </div>
-
-                {[
-                  { title:"No Liability", body:"This application provides nutrient dosing guidance based on General Hydroponics' publicly available feedcharts and general agronomic best practices. Crop results vary significantly based on environmental conditions, water chemistry, genetics, growing methods, and grower experience. The creators of this app accept no responsibility or liability for crop loss, damage, reduced yield, or any other adverse outcome resulting from the use of this application." },
-                  { title:'"As-Is" Software & No Warranty', body:'This application is provided on an "as-is" and "as-available" basis, without warranties of any kind, either express or implied. We are not liable for typographical errors, calculation bugs, system downtimes, or any damages arising from reliance on the software\'s outputs.' },
-                  { title:"User Responsibility", body:"You are solely responsible for monitoring your plants, measuring EC and pH before and after mixing, and adjusting doses to suit your specific conditions. This app is a starting point — not a substitute for your own observation and judgment. Always start with the Light feed strength if you are new to a system or a new batch of inputs, and increase gradually based on plant response." },
-                  { title:"Health & Consumption", body:"This application provides agricultural guidance only, not health, dietary, or medical advice. We make no guarantees regarding the safety, edibility, or quality of any harvested crops. Consuming the end product grown using guidance from this app is done entirely at your own risk." },
-                  { title:"Not Affiliated with General Hydroponics", body:"This application is an independent tool and is not affiliated with, endorsed by, sponsored by, or officially supported by General Hydroponics, Hawthorne Gardening Company, or any of their subsidiaries. All product names, trademarks, and brand references are the property of their respective owners and are used here solely for identification purposes." },
-                  { title:"Start Low, Go Slow", body:"Feeding recommendations are provided at three strength tiers: Light, Medium, and Aggressive. If you are new to a system, a new strain, or growing in a new environment, always begin at the Light tier. Overfeeding is one of the most common causes of crop stress and nutrient lockout. It is far easier to correct an underfed plant than to recover from nutrient burn or salt toxicity." },
-                  { title:"Legal Compliance & Age Restriction", body:"This app does not make any representations about the legality of the crops you are growing. It is your sole responsibility to ensure that your growing activities comply with all applicable local, state, federal, and international laws and regulations. You must be of legal age in your jurisdiction to use this application. The inclusion of any plant type in this application does not constitute endorsement or encouragement of any illegal activity." },
-                  { title:"Modifications to Terms", body:"We reserve the right to modify this disclaimer at any time without prior notice. Continued use of the application constitutes acceptance of any changes." },
-                ].map(({title,body})=>(
-                  <div key={title} style={{marginBottom:20}}>
-                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,fontWeight:800,color:GH.text,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}}>{title}</div>
-                    <div style={{fontSize:13,color:GH.muted,fontFamily:"'DM Sans',sans-serif",lineHeight:1.7}}>{body}</div>
-                  </div>
-                ))}
-
-                <div style={{marginTop:8,paddingTop:16,borderTop:`1px solid ${GH.border}`,fontSize:11,color:GH.dim,fontFamily:"'DM Sans',sans-serif",lineHeight:1.6,textAlign:"center"}}>
-                  By using this application you acknowledge that you have read and agree to this disclaimer.
-                </div>
-                <button onClick={()=>setShowDisclaimer(false)}
-                  style={{width:"100%",marginTop:20,padding:"16px",background:GH.green,border:"none",color:"#000",fontFamily:"'Barlow Condensed',sans-serif",fontSize:16,fontWeight:800,letterSpacing:"0.1em",cursor:"pointer"}}>
-                  I UNDERSTAND
-                </button>
-              </div>
-            </div>
-          )}
+    if(step===0) return (
+      <div>
+        <div style={sectionLabel()}>SELECT GROWING MEDIUM</div>
+        <div style={{fontSize:12,color:"#444",fontFamily:"'DM Sans',sans-serif",marginBottom:20,lineHeight:1.6}}>
+          Your growing medium affects how much nutrient your plants can access. Soil buffers and holds nutrition longer — hydroponic systems require the full chart dose.
         </div>
-      );
-    }
+        {[
+          { value:"hydro",   icon:"💧", label:"Hydroponics",  sub:"DWC · NFT · Aeroponics · Ebb & Flow",      mult:"Full chart dose" },
+          { value:"inert",   icon:"🪨", label:"Inert Medium",  sub:"Coco · Rockwool · Perlite · Clay pebbles", mult:"90% of chart dose" },
+          { value:"potting", icon:"🪴", label:"Potting Soil",  sub:"Pre-amended mixes · Fox Farm · ProMix",    mult:"60% of chart dose" },
+          { value:"soil",    icon:"🌍", label:"Ground Soil",   sub:"Garden beds · native soil",                mult:"40% of chart dose" },
+        ].map(opt=>{
+          const sel=substrate===opt.value;
+          return (
+            <button key={opt.value} onClick={()=>{setSubstrate(opt.value);setStep(1);}}
+              style={{display:"flex",alignItems:"center",gap:16,width:"100%",marginBottom:10,padding:"18px 20px",background:sel?"rgba(120,190,32,0.09)":"#f8f8f8",border:`1px solid ${sel?"#78BE20":"#e0e0e0"}`,cursor:"pointer",textAlign:"left",transition:"all 0.15s",position:"relative"}}>
+              {sel&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:4,background:"#78BE20"}}/>}
+              <span style={{fontSize:36,flexShrink:0}}>{opt.icon}</span>
+              <div style={{flex:1,paddingLeft:sel?4:0}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:sel?"#78BE20":"#111",textTransform:"uppercase",letterSpacing:"0.05em"}}>{opt.label}</div>
+                <div style={{fontSize:11,color:"#777",fontFamily:"'DM Sans',sans-serif",marginTop:2}}>{opt.sub}</div>
+              </div>
+              <div style={{textAlign:"right",flexShrink:0}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,color:sel?"#78BE20":"#999",letterSpacing:"0.08em"}}>{opt.mult}</div>
+              </div>
+            </button>
+          );
+        })}
+        <div style={{marginTop:24,paddingTop:20,borderTop:"1px solid #e0e0e0",textAlign:"center"}}>
+          <button onClick={()=>setShowDisclaimer(true)}
+            style={{background:"none",border:"1px solid #e0e0e0",color:"#777",fontFamily:"'DM Sans',sans-serif",fontSize:12,padding:"10px 20px",cursor:"pointer",letterSpacing:"0.03em"}}>
+            ⚖ Legal Disclaimer
+          </button>
+        </div>
+      </div>
+    );
 
     // ── STEP 1: BRAND PICKER ────────────────────────────────────────────────
     if(step===1) return (
@@ -1473,6 +1431,7 @@ export default function FloraApp() {
 
       </div>
     );
+    return null;
   };
 
   // ── STYLE HELPERS ──────────────────────────────────────────────────────────
@@ -1533,6 +1492,38 @@ export default function FloraApp() {
       <div style={{maxWidth:480,margin:"0 auto",padding:"20px 16px 80px"}}>
         {renderStep()}
       </div>
+
+      {/* Disclaimer Modal — rendered at top level so it's not affected by step changes */}
+      {showDisclaimer&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.6)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
+          onClick={()=>setShowDisclaimer(false)}>
+          <div style={{background:"#fff",width:"100%",maxWidth:600,maxHeight:"85vh",overflowY:"auto",padding:"28px 24px 40px",borderRadius:"12px 12px 0 0"}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:"#111",letterSpacing:"0.05em",textTransform:"uppercase"}}>Legal Disclaimer</div>
+              <button onClick={()=>setShowDisclaimer(false)} style={{background:"none",border:"none",fontSize:22,color:"#777",cursor:"pointer",lineHeight:1}}>✕</button>
+            </div>
+            {[
+              { title:"No Liability", body:"This application provides nutrient dosing guidance based on General Hydroponics' publicly available feedcharts and general agronomic best practices. Crop results vary significantly based on environmental conditions, water chemistry, genetics, growing methods, and grower experience. The creators of this app accept no responsibility or liability for crop loss, damage, reduced yield, or any other adverse outcome resulting from the use of this application." },
+              { title:'"As-Is" Software & No Warranty', body:'This application is provided on an "as-is" and "as-available" basis, without warranties of any kind, either express or implied. We are not liable for typographical errors, calculation bugs, system downtimes, or any damages arising from reliance on the software\'s outputs.' },
+              { title:"User Responsibility", body:"You are solely responsible for monitoring your plants, measuring EC and pH before and after mixing, and adjusting doses to suit your specific conditions. This app is a starting point — not a substitute for your own observation and judgment. Always start with the Light feed strength if you are new to a system or a new batch of inputs, and increase gradually based on plant response." },
+              { title:"Health & Consumption", body:"This application provides agricultural guidance only, not health, dietary, or medical advice. We make no guarantees regarding the safety, edibility, or quality of any harvested crops. Consuming the end product grown using guidance from this app is done entirely at your own risk." },
+              { title:"Not Affiliated with General Hydroponics", body:"This application is an independent tool and is not affiliated with, endorsed by, sponsored by, or officially supported by General Hydroponics, Hawthorne Gardening Company, or any of their subsidiaries. All product names, trademarks, and brand references are the property of their respective owners and are used here solely for identification purposes." },
+              { title:"Start Low, Go Slow", body:"Feeding recommendations are provided at three strength tiers: Light, Medium, and Aggressive. If you are new to a system, a new strain, or growing in a new environment, always begin at the Light tier. Overfeeding is one of the most common causes of crop stress and nutrient lockout. It is far easier to correct an underfed plant than to recover from nutrient burn or salt toxicity." },
+              { title:"Legal Compliance & Age Restriction", body:"This app does not make any representations about the legality of the crops you are growing. It is your sole responsibility to ensure that your growing activities comply with all applicable local, state, federal, and international laws and regulations. You must be of legal age in your jurisdiction to use this application. The inclusion of any plant type in this application does not constitute endorsement or encouragement of any illegal activity." },
+              { title:"Modifications to Terms", body:"We reserve the right to modify this disclaimer at any time without prior notice. Continued use of the application constitutes acceptance of any changes." },
+            ].map(({title,body})=>(
+              <div key={title} style={{marginBottom:20}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,fontWeight:800,color:"#111",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}}>{title}</div>
+                <div style={{fontSize:13,color:"#555",fontFamily:"'DM Sans',sans-serif",lineHeight:1.7}}>{body}</div>
+              </div>
+            ))}
+            <div style={{marginTop:8,paddingTop:16,borderTop:"1px solid #e0e0e0",fontSize:11,color:"#777",fontFamily:"'DM Sans',sans-serif",lineHeight:1.6,textAlign:"center"}}>
+              By using this application you acknowledge that you have read and agree to this disclaimer.
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap');
