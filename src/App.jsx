@@ -1571,13 +1571,14 @@ function computeCore(systemId,stageId,strength,gallons,plantId,waterType,substra
   const mod=(usePlantMod&&!isPowder&&PLANT_MODIFIERS[plantId]?.stages?.[stageId])||null;
   const SUBSTRATE_MULT={hydro:1.0,inert:0.9,potting:0.6,soil:0.4};
   const smult=SUBSTRATE_MULT[substrate]??1.0;
+  const cropScale=cropScaleFor(systemId,plantId,stageId,usePlantMod);
   const adj=(base,key)=>base*(mod?.[key]??1.0)*smult;
   const ml=(base,key)=>+(adj(base,key)*gallons).toFixed(1);
   const tsp=m=>+(m/4.92892).toFixed(2);
   const core={micro:{ml:ml(s.micro||0,"micro"),tsp:tsp(ml(s.micro||0,"micro"))},gro:{ml:ml(s.gro||0,"gro"),tsp:tsp(ml(s.gro||0,"gro"))},bloom:{ml:ml(s.bloom||0,"bloom"),tsp:tsp(ml(s.bloom||0,"bloom"))}};
   const included={};
   const cfg=SYSTEM_CONFIGS[systemId];
-  if(cfg){for(const key of cfg.includedKeys){const raw=s[key]??0;const mu=(INCL_META[key]?.unit)||"ml";if(raw<=0){included[key]={ml:0,tsp:0,unit:mu,...INCL_META[key]};continue;}const boost=WATER_BOOST_INCL[key]?.[waterType]??1.0;const km=CALMAG_INCL_KEYS.has(key)?(CALMAG_SUBSTRATE_MULT[substrate]??1.0):smult;const ml2=+(raw*gallons*boost*km).toFixed(1);included[key]={ml:ml2,tsp:+(ml2/4.92892).toFixed(2),unit:mu,...INCL_META[key]};}}
+  if(cfg){for(const key of cfg.includedKeys){const raw=s[key]??0;const mu=(INCL_META[key]?.unit)||"ml";if(raw<=0){included[key]={ml:0,tsp:0,unit:mu,...INCL_META[key]};continue;}const boost=WATER_BOOST_INCL[key]?.[waterType]??1.0;const isCalMag=CALMAG_INCL_KEYS.has(key);const km=isCalMag?(CALMAG_SUBSTRATE_MULT[substrate]??1.0):smult;const cs=isCalMag?1.0:cropScale;const ml2=+(raw*gallons*boost*km*cs).toFixed(1);included[key]={ml:ml2,tsp:+(ml2/4.92892).toFixed(2),unit:mu,...INCL_META[key]};}}
   return {core,included,isFlush:!!sched.isFlush,seedlingFixed:!!sched.seedlingFixed};
 }
 
@@ -1587,12 +1588,12 @@ function getConflicts(ids){
   return f;
 }
 
-function calcEC(systemId,stageId,strength,gallons,waterType,activeSupps,includedDoses,ecCeiling,substrate){
+function calcEC(systemId,stageId,strength,gallons,waterType,activeSupps,includedDoses,ecCeiling,substrate,cropScale=1.0){
   const range=EC_RANGES[systemId]?.[stageId]?.[strength]||[0,0];
   const SUBSTRATE_MULT={hydro:1.0,inert:0.9,potting:0.6,soil:0.4};
   const smult=SUBSTRATE_MULT[substrate]??1.0;
-  // Nutrient-derived EC scales with the substrate dose reduction
-  const mid=((range[0]+range[1])/2)*smult,wb=WATER_BASELINE_EC[waterType]||0;
+  // Nutrient-derived EC scales with the substrate reduction and the crop scaler
+  const mid=((range[0]+range[1])/2)*smult*cropScale,wb=WATER_BASELINE_EC[waterType]||0;
   let se=0;
   for(const s of activeSupps){if(!s.dose||s.dose.ml<=0)continue;se+=(s.dose.ml/gallons)*(SUPP_EC_PER_ML_GAL[s.id]||0.03);}
   for(const[key,d] of Object.entries(includedDoses)){if(!d||d.ml<=0)continue;se+=(d.ml/gallons)*(INCL_EC[key]||0.03);}
@@ -1664,9 +1665,37 @@ const PLANT_MODIFIERS = {
   herbs:       { ecCeiling:1.8, ecNote:"1.8 mS/cm ceiling — excess N dilutes essential oil content.", mods:[{bottle:"FloraMicro",dir:"↓",why:"Moderate feeder; excess causes rank growth"},{bottle:"FloraGro",dir:"↓",why:"High N dilutes essential oils in basil & herbs"}], stages:{seedling:{micro:0.80,gro:0.80,bloom:0.80},early_growth:{micro:0.80,gro:0.80,bloom:0.80},late_growth:{micro:0.80,gro:0.80,bloom:0.80}} },
   strawberries:{ ecCeiling:2.2, ecNote:"2.2 mS/cm ceiling — K-forward nutrition with moderate EC.", mods:[{bottle:"FloraMicro",dir:"↑",why:"Extra Ca improves fruit firmness"},{bottle:"FloraBloom",dir:"↑",why:"K boosts Brix and shelf life"}], stages:{early_flower:{micro:1.04,gro:0.95,bloom:1.08},peak_flower:{micro:1.04,gro:0.90,bloom:1.10},late_flower:{micro:1.04,gro:0.88,bloom:1.08}} },
   roses:       { ecCeiling:2.3, ecNote:"2.3 mS/cm ceiling — moderate-heavy feeder with good EC tolerance.", mods:[{bottle:"FloraGro",dir:"↑",why:"Elevated N for strong cane development"},{bottle:"FloraBloom",dir:"↑",why:"K drives petal count and fragrance"}], stages:{early_growth:{micro:1.00,gro:1.08,bloom:1.00},late_growth:{micro:1.00,gro:1.08,bloom:1.00},early_flower:{micro:1.00,gro:1.00,bloom:1.06},peak_flower:{micro:1.00,gro:0.95,bloom:1.10},late_flower:{micro:1.00,gro:0.92,bloom:1.08}} },
-  orchids:     { ecCeiling:1.0, ecNote:"Hard 1.0 mS/cm ceiling — extremely salt-sensitive. Dilute feeds only.", mods:[{bottle:"FloraMicro",dir:"↓",why:"\"Weakly, weekly\" — scaled to ~45% of chart"},{bottle:"FloraGro",dir:"↓",why:"Epiphytes adapted to nutrient-poor environments"},{bottle:"FloraBloom",dir:"↓",why:"Over-fertilization is the #1 cause of orchid death"}], stages:{seedling:{micro:0.45,gro:0.45,bloom:0.45},early_growth:{micro:0.45,gro:0.45,bloom:0.45},early_flower:{micro:0.45,gro:0.40,bloom:0.50},late_flower:{micro:0.45,gro:0.38,bloom:0.50},late_flower:{micro:0.45,gro:0.38,bloom:0.50},late_flower:{micro:0.45,gro:0.35,bloom:0.50}} },
+  orchids:     { ecCeiling:1.0, ecNote:"Hard 1.0 mS/cm ceiling — extremely salt-sensitive. Dilute feeds only.", mods:[{bottle:"FloraMicro",dir:"↓",why:"\"Weakly, weekly\" — scaled to ~45% of chart"},{bottle:"FloraGro",dir:"↓",why:"Epiphytes adapted to nutrient-poor environments"},{bottle:"FloraBloom",dir:"↓",why:"Over-fertilization is the #1 cause of orchid death"}], stages:{seedling:{micro:0.45,gro:0.45,bloom:0.45},early_growth:{micro:0.45,gro:0.45,bloom:0.45},late_growth:{micro:0.45,gro:0.45,bloom:0.45},early_flower:{micro:0.45,gro:0.40,bloom:0.50},peak_flower:{micro:0.45,gro:0.38,bloom:0.50},late_flower:{micro:0.45,gro:0.35,bloom:0.50}} },
   houseplants: { ecCeiling:1.8, ecNote:"1.8 mS/cm ceiling — slow-growing light feeders by nature.", mods:[{bottle:"FloraMicro",dir:"↓",why:"Gentle, dilute nutrition needed"},{bottle:"FloraGro",dir:"↓",why:"~65% of chart — excess causes salt buildup"}], stages:{seedling:{micro:0.65,gro:0.65,bloom:0.65},early_growth:{micro:0.65,gro:0.65,bloom:0.65},late_growth:{micro:0.65,gro:0.65,bloom:0.65}} },
 };
+
+// Plant modifiers only adjust the GH Classic core bottles (Micro/Gro/Bloom).
+// These are the only systems whose doses actually change with the plant.
+const PLANT_MOD_SYSTEMS = new Set(["3part","6part","10part"]);
+
+// Option C: per-plant, per-stage feed curve applied to EVERY non-Classic brand's
+// doses when plant-specific dosing is switched on. Each value multiplies that
+// stage's chart dose, so a starting grower can see where the flex is: gentle at
+// seedling, ramping through veg, pushing (or easing) through flower per crop.
+// Values below 1.0 feed lighter than the chart, above 1.0 push harder. GH Classic
+// uses its own per-bottle per-stage modifiers above instead of this curve.
+const PLANT_STAGE_SCALE = {
+  //            seedling      early_growth   late_growth    early_flower   peak_flower    late_flower    flush
+  tomatoes:     { seedling:0.85, early_growth:0.95, late_growth:1.00, early_flower:1.05, peak_flower:1.10, late_flower:1.00, flush:1.0 },
+  cannabis:     { seedling:0.85, early_growth:0.95, late_growth:1.00, early_flower:1.00, peak_flower:1.05, late_flower:0.90, flush:1.0 },
+  peppers:      { seedling:0.85, early_growth:0.92, late_growth:0.95, early_flower:1.00, peak_flower:1.05, late_flower:0.95, flush:1.0 },
+  cucumbers:    { seedling:0.80, early_growth:0.90, late_growth:0.92, early_flower:0.92, peak_flower:0.93, late_flower:0.90, flush:1.0 },
+  lettuce:      { seedling:0.60, early_growth:0.68, late_growth:0.72, early_flower:0.72, peak_flower:0.72, late_flower:0.72, flush:1.0 },
+  herbs:        { seedling:0.70, early_growth:0.78, late_growth:0.82, early_flower:0.82, peak_flower:0.82, late_flower:0.82, flush:1.0 },
+  strawberries: { seedling:0.75, early_growth:0.85, late_growth:0.90, early_flower:0.92, peak_flower:0.95, late_flower:0.88, flush:1.0 },
+  roses:        { seedling:0.90, early_growth:1.00, late_growth:1.05, early_flower:1.00, peak_flower:1.05, late_flower:0.95, flush:1.0 },
+  orchids:      { seedling:0.45, early_growth:0.45, late_growth:0.45, early_flower:0.45, peak_flower:0.48, late_flower:0.45, flush:1.0 },
+  houseplants:  { seedling:0.55, early_growth:0.62, late_growth:0.65, early_flower:0.65, peak_flower:0.65, late_flower:0.65, flush:1.0 },
+};
+function cropScaleFor(systemId, plantId, stageId, usePlantMod){
+  if(!usePlantMod || PLANT_MOD_SYSTEMS.has(systemId)) return 1.0;
+  return PLANT_STAGE_SCALE[plantId]?.[stageId] ?? 1.0;
+}
 
 // ─── SUPPLEMENT RECOMMENDATIONS ─────────────────────────────────────────────
 // Returns { level: "recommended"|"optional"|"skip", reason: string }
@@ -1933,7 +1962,7 @@ export default function FloraApp() {
   const [substrate,  setSubstrate]  = useState(null); // "hydro"|"inert"|"potting"|"soil"
   const [manufacturer, setManufacturer] = useState(null); // "gh"|"athena"|"jacks"
   const [brand,     setBrand]     = useState(null); // "classic" | "florapro"
-  const [usePlantMod, setUsePlantMod] = useState(true);
+  const [usePlantMod, setUsePlantMod] = useState(false);
   const [system,    setSystem]    = useState(null);
   const [plant,     setPlant]     = useState(null);
   const [stage,     setStage]     = useState(null);
@@ -2038,9 +2067,9 @@ export default function FloraApp() {
     const gal = run.unit==="gallons" ? run.volume : run.volume/3.78541;
     let ec=null;
     try{
-      const c=computeCore(sys,run.stage,run.strength,gal,run.plant,run.water,"hydro",true);
+      const c=computeCore(sys,run.stage,run.strength,gal,run.plant,run.water,"hydro",usePlantMod);
       const ceil=PLANT_MODIFIERS[run.plant]?.ecCeiling??DWC_EC_CEILING;
-      const ecObj=calcEC(sys,run.stage,run.strength,gal,run.water,[],c?.included||{},ceil,"hydro");
+      const ecObj=calcEC(sys,run.stage,run.strength,gal,run.water,[],c?.included||{},ceil,"hydro",cropScaleFor(sys,run.plant,run.stage,usePlantMod));
       ec=ecObj?.estimated??null;
     }catch{}
     const st=STAGE_META[run.stage];
@@ -2064,6 +2093,7 @@ export default function FloraApp() {
   const plantMod    = plant&&stage ? PLANT_MODIFIERS[plant]?.stages?.[stage] : null;
   const plantEcCeil = plant ? (PLANT_MODIFIERS[plant]?.ecCeiling??DWC_EC_CEILING) : DWC_EC_CEILING;
   const plantModMeta= plant ? PLANT_MODIFIERS[plant] : null;
+  const activeCropScale = system&&plant ? cropScaleFor(system,plant,stage,usePlantMod) : 1.0;
 
   const computed = useMemo(()=>{
     if(!system||!plant||!stage||volume<=0)return null;
@@ -2083,7 +2113,7 @@ export default function FloraApp() {
 
   const conflicts   = useMemo(()=>getConflicts([...supps]),[supps]);
   const conflictIds = useMemo(()=>new Set(conflicts.flatMap(c=>[c.a,c.b])),[conflicts]);
-  const ecData      = useMemo(()=>core&&stage&&system?calcEC(system,stage,strength,gallons,water,suppData.filter(s=>s.active),included,plantEcCeil,substrate):null,[core,stage,system,strength,gallons,water,suppData,included,plantEcCeil,substrate]);
+  const ecData      = useMemo(()=>core&&stage&&system?calcEC(system,stage,strength,gallons,water,suppData.filter(s=>s.active),included,plantEcCeil,substrate,cropScaleFor(system,plant,stage,usePlantMod)):null,[core,stage,system,strength,gallons,water,suppData,included,plantEcCeil,substrate,plant,usePlantMod]);
   const mixSteps    = useMemo(()=>core?buildMixOrder(core,suppData.filter(s=>s.active),included):[],[core,suppData,included]);
 
   const toggleSupp = id=>setSupps(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});
@@ -2147,6 +2177,22 @@ export default function FloraApp() {
             <span style={{color:"#78BE20",fontSize:20,fontWeight:700}}>→</span>
           </button>
         )}
+        {/* Master switch: plant-specific dosing (applies a per-crop scaler on top of the chart) */}
+        <div style={{display:"flex",alignItems:"center",gap:14,width:"100%",marginBottom:18,padding:"14px 16px",background:usePlantMod?"rgba(120,190,32,0.08)":"#fff",border:`1px solid ${usePlantMod?"rgba(120,190,32,0.5)":"#e0e0e0"}`,borderRadius:14,transition:"all 0.2s"}}>
+          <span style={{fontSize:22,flexShrink:0}}>🌱</span>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:15,fontWeight:700,color:usePlantMod?"#5a9a10":"#111"}}>Plant-specific dosing</div>
+            <div style={{fontSize:11,color:"#777",fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",marginTop:2,lineHeight:1.45}}>
+              {usePlantMod
+                ? "On. Doses are tuned for your crop at each growth stage."
+                : "Off. Showing each brand's standard chart doses, unchanged."}
+            </div>
+          </div>
+          <button onClick={()=>setUsePlantMod(v=>!v)} aria-label="Toggle plant-specific dosing"
+            style={{flexShrink:0,width:48,height:28,borderRadius:14,background:usePlantMod?"#78BE20":"#ccc",border:"none",cursor:"pointer",position:"relative",transition:"background 0.2s"}}>
+            <div style={{position:"absolute",top:3,left:usePlantMod?23:3,width:22,height:22,borderRadius:11,background:"#fff",transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
+          </button>
+        </div>
         {/* Search */}
         <div style={{position:"relative",marginBottom:18}}>
           <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:15,color:"#999",pointerEvents:"none"}}>🔍</span>
@@ -2245,7 +2291,6 @@ export default function FloraApp() {
 
           {lines.map(line=>{
             const sel=brand===line.id;
-            const isClassic=line.id==="classic";
             return (
               <div key={line.id} style={{marginBottom:10,background:sel?`${line.color}12`:GH.card,borderRadius:14,border:`1px solid ${sel?line.color:GH.border}`,overflow:"hidden",transition:"all 0.15s"}}>
                 <button onClick={()=>{const onlyOne=line.systems.length<=1;setBrand(line.id);setSystem(onlyOne?line.systems[0]:null);setPlant(null);setStage(null);setSupps(new Set());setStep(onlyOne?4:3);}}
@@ -2256,18 +2301,6 @@ export default function FloraApp() {
                   </div>
                   {sel&&<span style={{color:line.color,fontSize:20,fontWeight:700}}>→</span>}
                 </button>
-                {isClassic&&(
-                  <div style={{borderTop:`1px solid ${line.color}33`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
-                    <div>
-                      <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:12,fontWeight:700,color:line.color,letterSpacing:"0.06em",marginBottom:2}}>Plant Modifiers</div>
-                      <div style={{fontSize:11,color:GH.dim,fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",lineHeight:1.4}}>Adjusts doses for your specific crop — cannabis gets more nitrogen, orchids get less.</div>
-                    </div>
-                    <button onClick={e=>{e.stopPropagation();setUsePlantMod(v=>!v);}}
-                      style={{flexShrink:0,width:44,height:24,borderRadius:12,background:usePlantMod?line.color:"#ccc",border:"none",cursor:"pointer",position:"relative",transition:"background 0.2s"}}>
-                      <div style={{position:"absolute",top:3,left:usePlantMod?22:3,width:18,height:18,borderRadius:9,background:"#fff",transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
-                    </button>
-                  </div>
-                )}
               </div>
             );
           })}
@@ -2572,8 +2605,8 @@ export default function FloraApp() {
           </div>
         )}
 
-        {/* Plant modifier info box — Classic liquid systems only */}
-        {!sysCfg?.isPowder&&plantModMeta&&(
+        {/* Plant modifier info box — GH Classic liquid systems only (only these doses change with the plant) */}
+        {sysCfg&&PLANT_MOD_SYSTEMS.has(sysCfg.id)&&plantModMeta&&(
           <div style={{background:GH.card,borderRadius:14,border:`1px solid ${usePlantMod?GH.green+"55":"#ccc"}`,borderLeft:`4px solid ${usePlantMod?GH.green:"#ccc"}`,marginBottom:12,overflow:"hidden"}}>
             {/* Header */}
             <div style={{padding:"12px 16px",borderBottom:`1px solid ${usePlantMod?GH.green+"22":GH.border}`}}>
@@ -2613,9 +2646,26 @@ export default function FloraApp() {
               </div>
             ):(
               <div style={{padding:"10px 16px"}}>
-                <div style={{fontSize:11,color:GH.dim,fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontStyle:"italic"}}>Plant modifiers are off — using standard chart doses. Turn on from the Brand page to apply crop-specific adjustments.</div>
+                <div style={{fontSize:11,color:GH.dim,fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontStyle:"italic"}}>Plant-specific dosing is off — using standard chart doses. Turn it on from the Fertilizer page to apply crop-specific adjustments.</div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Crop scaler note — non-Classic systems when plant-specific dosing is on */}
+        {sysCfg&&!PLANT_MOD_SYSTEMS.has(sysCfg.id)&&usePlantMod&&plantObj&&(
+          <div style={{background:`${GH.green}0D`,borderRadius:14,border:`1px solid ${GH.green}44`,borderLeft:`4px solid ${GH.green}`,marginBottom:12,padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
+            <span style={{fontSize:18,flexShrink:0}}>🌱</span>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:12,fontWeight:800,color:GH.green,letterSpacing:"0.08em",textTransform:"uppercase"}}>Plant-specific dosing on</div>
+              <div style={{fontSize:11,color:GH.dim,fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",marginTop:2,lineHeight:1.5}}>
+                {activeCropScale<1.0
+                  ? <>At <strong style={{color:GH.text}}>{stageObj?.label||"this stage"}</strong>, doses are set to <strong style={{color:GH.text}}>{Math.round(activeCropScale*100)}%</strong> of the chart for {plantObj.name.toLowerCase()}, and this shifts as the plant moves through its stages. Turn it off on the Fertilizer page for straight chart doses.</>
+                  : activeCropScale>1.0
+                    ? <>At <strong style={{color:GH.text}}>{stageObj?.label||"this stage"}</strong>, doses are pushed to <strong style={{color:GH.text}}>{Math.round(activeCropScale*100)}%</strong> of the chart, since {plantObj.name.toLowerCase()} demand more here. Keep an eye on the EC budget below. Turn it off on the Fertilizer page for straight chart doses.</>
+                    : <>At <strong style={{color:GH.text}}>{stageObj?.label||"this stage"}</strong>, {plantObj.name.toLowerCase()} sit right at the chart dose. The adjustment shifts by stage, so it changes as the plant grows.</>}
+              </div>
+            </div>
           </div>
         )}
 
