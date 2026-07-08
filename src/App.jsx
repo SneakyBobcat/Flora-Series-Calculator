@@ -18,17 +18,53 @@ const VEG_ONLY        = ["seedling","early_growth","late_growth","flush"];
 const FLOWER_NO_SEED  = ["early_growth","late_growth","early_flower","peak_flower","late_flower","flush"];
 const NO_SEED_NO_FLUSH= ["early_growth","late_growth","early_flower","peak_flower","late_flower"];
 
+// Plant groupings for the crop picker
+const PLANT_CATEGORIES = [
+  { id:"fruiting", label:"Fruiting Vegetables" },
+  { id:"greens",   label:"Leafy Greens" },
+  { id:"root",     label:"Root & Tuber Crops" },
+  { id:"herbs",    label:"Herbs" },
+  { id:"berries",  label:"Berries & Fruit" },
+  { id:"flowers",  label:"Flowers & Ornamentals" },
+  { id:"indoor",   label:"Houseplants & Succulents" },
+  { id:"cannabis", label:"Cannabis" },
+];
+
 const PLANTS = [
-  { id:"tomatoes",     name:"Tomatoes",        icon:"🍅", maxStages:[...FRUIT_STAGES] },
-  { id:"cannabis",     name:"Cannabis / Hemp", icon:"🌿", maxStages:[...FRUIT_STAGES] },
-  { id:"peppers",      name:"Peppers",         icon:"🌶️", maxStages:[...FRUIT_STAGES] },
-  { id:"cucumbers",    name:"Cucumbers",       icon:"🥒", maxStages:[...FRUIT_STAGES] },
-  { id:"lettuce",      name:"Lettuce / Greens",icon:"🥬", maxStages:[...VEG_ONLY] },
-  { id:"herbs",        name:"Herbs & Basil",   icon:"🌱", maxStages:[...VEG_ONLY] },
-  { id:"strawberries", name:"Strawberries",    icon:"🍓", maxStages:[...FRUIT_STAGES] },
-  { id:"roses",        name:"Roses",           icon:"🌹", maxStages:[...NO_SEED_NO_FLUSH] },
-  { id:"orchids",      name:"Orchids",         icon:"🌸", maxStages:[...NO_SEED_NO_FLUSH] },
-  { id:"houseplants",  name:"Houseplants",     icon:"🪴", maxStages:[...VEG_ONLY] },
+  // Fruiting Vegetables
+  { id:"tomatoes",     name:"Tomatoes",          icon:"🍅", cat:"fruiting", maxStages:[...FRUIT_STAGES] },
+  { id:"peppers",      name:"Peppers",           icon:"🌶️", cat:"fruiting", maxStages:[...FRUIT_STAGES] },
+  { id:"cucumbers",    name:"Cucumbers",         icon:"🥒", cat:"fruiting", maxStages:[...FRUIT_STAGES] },
+  { id:"squash",       name:"Squash & Zucchini", icon:"🎃", cat:"fruiting", maxStages:[...FRUIT_STAGES] },
+  { id:"eggplant",     name:"Eggplant",          icon:"🍆", cat:"fruiting", maxStages:[...FRUIT_STAGES] },
+  { id:"beans",        name:"Beans & Peas",      icon:"🫛", cat:"fruiting", maxStages:[...FRUIT_STAGES] },
+  { id:"corn",         name:"Corn",              icon:"🌽", cat:"fruiting", maxStages:[...FRUIT_STAGES] },
+  { id:"melons",       name:"Melons",            icon:"🍈", cat:"fruiting", maxStages:[...FRUIT_STAGES] },
+  // Leafy Greens
+  { id:"lettuce",      name:"Lettuce / Greens",  icon:"🥬", cat:"greens",   maxStages:[...VEG_ONLY] },
+  { id:"spinach",      name:"Spinach",           icon:"🍃", cat:"greens",   maxStages:[...VEG_ONLY] },
+  { id:"kale",         name:"Kale & Chard",      icon:"🥗", cat:"greens",   maxStages:[...VEG_ONLY] },
+  { id:"brassicas",    name:"Cabbage & Broccoli",icon:"🥦", cat:"greens",   maxStages:[...VEG_ONLY] },
+  // Root & Tuber Crops
+  { id:"potatoes",     name:"Potatoes",          icon:"🥔", cat:"root",     maxStages:[...FRUIT_STAGES] },
+  { id:"carrots",      name:"Carrots & Beets",   icon:"🥕", cat:"root",     maxStages:[...VEG_ONLY] },
+  { id:"onions",       name:"Onions & Garlic",   icon:"🧅", cat:"root",     maxStages:[...VEG_ONLY] },
+  { id:"radishes",     name:"Radishes",          icon:"🌱", cat:"root",     maxStages:[...VEG_ONLY] },
+  // Herbs
+  { id:"herbs",        name:"Herbs & Basil",     icon:"🌿", cat:"herbs",    maxStages:[...VEG_ONLY] },
+  // Berries & Fruit
+  { id:"strawberries", name:"Strawberries",      icon:"🍓", cat:"berries",  maxStages:[...FRUIT_STAGES] },
+  { id:"blueberries",  name:"Blueberries",       icon:"🫐", cat:"berries",  maxStages:[...NO_SEED_NO_FLUSH] },
+  { id:"caneberries",  name:"Raspberries & Blackberries", icon:"🍇", cat:"berries", maxStages:[...NO_SEED_NO_FLUSH] },
+  // Flowers & Ornamentals
+  { id:"roses",        name:"Roses",             icon:"🌹", cat:"flowers",  maxStages:[...NO_SEED_NO_FLUSH] },
+  { id:"orchids",      name:"Orchids",           icon:"🌸", cat:"flowers",  maxStages:[...NO_SEED_NO_FLUSH] },
+  { id:"annuals",      name:"Flowering Annuals", icon:"🌼", cat:"flowers",  maxStages:[...FRUIT_STAGES] },
+  // Houseplants & Succulents
+  { id:"houseplants",  name:"Houseplants",       icon:"🪴", cat:"indoor",   maxStages:[...VEG_ONLY] },
+  { id:"succulents",   name:"Succulents & Cacti",icon:"🌵", cat:"indoor",   maxStages:[...VEG_ONLY] },
+  // Cannabis
+  { id:"cannabis",     name:"Cannabis / Hemp",   icon:"🌿", cat:"cannabis", maxStages:[...FRUIT_STAGES] },
 ];
 
 // Optimal pH window per plant, in [soilless_lo, soilless_hi, soil_lo, soil_hi].
@@ -46,6 +82,28 @@ const PLANT_PH = {
   roses:        [5.8, 6.3, 6.0, 6.8],
   orchids:      [5.5, 6.2, 5.5, 6.5],
   houseplants:  [5.8, 6.3, 6.0, 6.8],
+  // Fruiting vegetables
+  squash:       [5.5, 6.3, 6.0, 6.8],
+  eggplant:     [5.5, 6.3, 6.0, 6.8],
+  beans:        [5.8, 6.3, 6.0, 7.0],
+  corn:         [5.8, 6.5, 6.0, 7.0],
+  melons:       [5.5, 6.3, 6.0, 6.8],
+  // Leafy greens
+  spinach:      [5.5, 6.5, 6.2, 7.0],
+  kale:         [5.5, 6.5, 6.0, 7.0],
+  brassicas:    [5.8, 6.5, 6.5, 7.0],
+  // Root & tuber (potatoes acidic to suppress scab)
+  potatoes:     [5.5, 6.0, 5.0, 6.0],
+  carrots:      [5.8, 6.5, 6.0, 6.8],
+  onions:       [6.0, 6.7, 6.0, 7.0],
+  radishes:     [5.8, 6.5, 6.0, 7.0],
+  // Berries (blueberries strongly acidic)
+  blueberries:  [4.5, 5.5, 4.5, 5.5],
+  caneberries:  [5.5, 6.5, 5.8, 6.5],
+  // Flowers
+  annuals:      [5.5, 6.3, 6.0, 6.8],
+  // Succulents
+  succulents:   [5.5, 6.5, 6.0, 6.5],
 };
 
 // Resolve a pH target range from the plant + growing medium.
@@ -57,7 +115,7 @@ function phTarget(plantId, substrate){
   if(substrate==="inert")   return { range:fmt(slo,shi), mediumLabel:"coco / inert" };
   if(substrate==="potting") return { range:fmt(gLo,gHi), mediumLabel:"potting mix" };
   if(substrate==="soil")    return { range:fmt(gLo,gHi), mediumLabel:"soil" };
-  return { range:`${fmt(slo,shi)} soilless · ${fmt(gLo,gHi)} soil`, mediumLabel:null };
+  return { range:fmt(slo,shi), mediumLabel:"soilless" };
 }
 
 const MANUFACTURERS = [
@@ -1572,7 +1630,7 @@ function computeCore(systemId,stageId,strength,gallons,plantId,waterType,substra
   const SUBSTRATE_MULT={hydro:1.0,inert:0.9,potting:0.6,soil:0.4};
   const smult=SUBSTRATE_MULT[substrate]??1.0;
   const cropScale=cropScaleFor(systemId,plantId,stageId,usePlantMod);
-  const adj=(base,key)=>base*(mod?.[key]??1.0)*smult;
+  const adj=(base,key)=>base*(mod?.[key]??cropScale)*smult;
   const ml=(base,key)=>+(adj(base,key)*gallons).toFixed(1);
   const tsp=m=>+(m/4.92892).toFixed(2);
   const core={micro:{ml:ml(s.micro||0,"micro"),tsp:tsp(ml(s.micro||0,"micro"))},gro:{ml:ml(s.gro||0,"gro"),tsp:tsp(ml(s.gro||0,"gro"))},bloom:{ml:ml(s.bloom||0,"bloom"),tsp:tsp(ml(s.bloom||0,"bloom"))}};
@@ -1667,6 +1725,23 @@ const PLANT_MODIFIERS = {
   roses:       { ecCeiling:2.3, ecNote:"2.3 mS/cm ceiling — moderate-heavy feeder with good EC tolerance.", mods:[{bottle:"FloraGro",dir:"↑",why:"Elevated N for strong cane development"},{bottle:"FloraBloom",dir:"↑",why:"K drives petal count and fragrance"}], stages:{early_growth:{micro:1.00,gro:1.08,bloom:1.00},late_growth:{micro:1.00,gro:1.08,bloom:1.00},early_flower:{micro:1.00,gro:1.00,bloom:1.06},peak_flower:{micro:1.00,gro:0.95,bloom:1.10},late_flower:{micro:1.00,gro:0.92,bloom:1.08}} },
   orchids:     { ecCeiling:1.0, ecNote:"Hard 1.0 mS/cm ceiling — extremely salt-sensitive. Dilute feeds only.", mods:[{bottle:"FloraMicro",dir:"↓",why:"\"Weakly, weekly\" — scaled to ~45% of chart"},{bottle:"FloraGro",dir:"↓",why:"Epiphytes adapted to nutrient-poor environments"},{bottle:"FloraBloom",dir:"↓",why:"Over-fertilization is the #1 cause of orchid death"}], stages:{seedling:{micro:0.45,gro:0.45,bloom:0.45},early_growth:{micro:0.45,gro:0.45,bloom:0.45},late_growth:{micro:0.45,gro:0.45,bloom:0.45},early_flower:{micro:0.45,gro:0.40,bloom:0.50},peak_flower:{micro:0.45,gro:0.38,bloom:0.50},late_flower:{micro:0.45,gro:0.35,bloom:0.50}} },
   houseplants: { ecCeiling:1.8, ecNote:"1.8 mS/cm ceiling — slow-growing light feeders by nature.", mods:[{bottle:"FloraMicro",dir:"↓",why:"Gentle, dilute nutrition needed"},{bottle:"FloraGro",dir:"↓",why:"~65% of chart — excess causes salt buildup"}], stages:{seedling:{micro:0.65,gro:0.65,bloom:0.65},early_growth:{micro:0.65,gro:0.65,bloom:0.65},late_growth:{micro:0.65,gro:0.65,bloom:0.65}} },
+  // Newer crops: EC ceiling + note only. Dosing flex is handled by the per-stage curve above.
+  squash:       { ecCeiling:2.6, ecNote:"2.6 mS/cm ceiling — heavy feeder; push through fruiting, watch magnesium as fruit sets." },
+  eggplant:     { ecCeiling:2.5, ecNote:"2.5 mS/cm ceiling — warm-season heavy feeder; keep potassium steady through fruiting." },
+  beans:        { ecCeiling:2.0, ecNote:"2.0 mS/cm ceiling — legumes fix their own nitrogen, so feed lighter, especially on N." },
+  corn:         { ecCeiling:2.4, ecNote:"2.4 mS/cm ceiling — nitrogen-hungry through tasseling; ease off as ears fill." },
+  melons:       { ecCeiling:2.5, ecNote:"2.5 mS/cm ceiling — heavy feeder; push potassium as fruit sizes, ease nitrogen late for sweetness." },
+  spinach:      { ecCeiling:1.8, ecNote:"1.8 mS/cm ceiling — fast leafy crop; gentle feeding, sensitive to salt." },
+  kale:         { ecCeiling:2.0, ecNote:"2.0 mS/cm ceiling — leafy brassica; steady nitrogen, moderate salt tolerance." },
+  brassicas:    { ecCeiling:2.4, ecNote:"2.4 mS/cm ceiling — cabbage and broccoli are moderate-heavy feeders; steady N and calcium." },
+  potatoes:     { ecCeiling:2.6, ecNote:"2.6 mS/cm ceiling — heavy potassium feeder during tuber bulking; keep soil acidic to fend off scab." },
+  carrots:      { ecCeiling:1.8, ecNote:"1.8 mS/cm ceiling — roots fork with excess nitrogen; feed lean on N, moderate K." },
+  onions:       { ecCeiling:1.8, ecNote:"1.8 mS/cm ceiling — steady moderate feed; ease off before bulbs mature." },
+  radishes:     { ecCeiling:1.6, ecNote:"1.6 mS/cm ceiling — fast and light; too much nitrogen grows tops instead of roots." },
+  blueberries:  { ecCeiling:1.5, ecNote:"1.5 mS/cm ceiling — acid-loving and salt-sensitive; prefers ammonium nitrogen, rarely needs extra P or K." },
+  caneberries:  { ecCeiling:2.0, ecNote:"2.0 mS/cm ceiling — perennial cane fruit; steady moderate feed, ease late season." },
+  annuals:      { ecCeiling:2.0, ecNote:"2.0 mS/cm ceiling — push bloom with potassium once budding; steady light feed otherwise." },
+  succulents:   { ecCeiling:1.2, ecNote:"1.2 mS/cm ceiling — very light feeder; overfeeding causes soft, weak growth." },
 };
 
 // Plant modifiers only adjust the GH Classic core bottles (Micro/Gro/Bloom).
@@ -1691,9 +1766,34 @@ const PLANT_STAGE_SCALE = {
   roses:        { seedling:0.90, early_growth:1.00, late_growth:1.05, early_flower:1.00, peak_flower:1.05, late_flower:0.95, flush:1.0 },
   orchids:      { seedling:0.45, early_growth:0.45, late_growth:0.45, early_flower:0.45, peak_flower:0.48, late_flower:0.45, flush:1.0 },
   houseplants:  { seedling:0.55, early_growth:0.62, late_growth:0.65, early_flower:0.65, peak_flower:0.65, late_flower:0.65, flush:1.0 },
+  // Fruiting vegetables
+  squash:       { seedling:0.85, early_growth:0.95, late_growth:1.00, early_flower:1.05, peak_flower:1.10, late_flower:1.00, flush:1.0 },
+  eggplant:     { seedling:0.82, early_growth:0.92, late_growth:0.98, early_flower:1.02, peak_flower:1.05, late_flower:0.95, flush:1.0 },
+  beans:        { seedling:0.65, early_growth:0.72, late_growth:0.75, early_flower:0.78, peak_flower:0.80, late_flower:0.72, flush:1.0 },
+  corn:         { seedling:0.85, early_growth:1.00, late_growth:1.05, early_flower:1.00, peak_flower:0.95, late_flower:0.85, flush:1.0 },
+  melons:       { seedling:0.82, early_growth:0.92, late_growth:1.00, early_flower:1.05, peak_flower:1.10, late_flower:0.95, flush:1.0 },
+  // Leafy greens
+  spinach:      { seedling:0.60, early_growth:0.70, late_growth:0.75, early_flower:0.75, peak_flower:0.75, late_flower:0.75, flush:1.0 },
+  kale:         { seedling:0.65, early_growth:0.75, late_growth:0.82, early_flower:0.82, peak_flower:0.82, late_flower:0.82, flush:1.0 },
+  brassicas:    { seedling:0.72, early_growth:0.85, late_growth:0.95, early_flower:0.95, peak_flower:0.95, late_flower:0.95, flush:1.0 },
+  // Root & tuber (potatoes push during bulking)
+  potatoes:     { seedling:0.80, early_growth:0.95, late_growth:1.05, early_flower:1.10, peak_flower:1.10, late_flower:0.95, flush:1.0 },
+  carrots:      { seedling:0.60, early_growth:0.72, late_growth:0.80, early_flower:0.80, peak_flower:0.80, late_flower:0.80, flush:1.0 },
+  onions:       { seedling:0.65, early_growth:0.78, late_growth:0.85, early_flower:0.85, peak_flower:0.85, late_flower:0.85, flush:1.0 },
+  radishes:     { seedling:0.55, early_growth:0.65, late_growth:0.70, early_flower:0.70, peak_flower:0.70, late_flower:0.70, flush:1.0 },
+  // Berries
+  blueberries:  { seedling:0.55, early_growth:0.60, late_growth:0.65, early_flower:0.65, peak_flower:0.68, late_flower:0.60, flush:1.0 },
+  caneberries:  { seedling:0.70, early_growth:0.80, late_growth:0.88, early_flower:0.90, peak_flower:0.92, late_flower:0.85, flush:1.0 },
+  // Flowers
+  annuals:      { seedling:0.70, early_growth:0.82, late_growth:0.88, early_flower:0.95, peak_flower:1.00, late_flower:0.90, flush:1.0 },
+  // Succulents
+  succulents:   { seedling:0.40, early_growth:0.45, late_growth:0.50, early_flower:0.50, peak_flower:0.50, late_flower:0.50, flush:1.0 },
 };
 function cropScaleFor(systemId, plantId, stageId, usePlantMod){
-  if(!usePlantMod || PLANT_MOD_SYSTEMS.has(systemId)) return 1.0;
+  if(!usePlantMod) return 1.0;
+  // GH Classic uses per-bottle modifiers for the original crops; those aren't scaled by a single number.
+  // Newer crops (no per-bottle stages) fall back to the whole-feed stage curve, on every system.
+  if(PLANT_MOD_SYSTEMS.has(systemId) && PLANT_MODIFIERS[plantId]?.stages?.[stageId]) return 1.0;
   return PLANT_STAGE_SCALE[plantId]?.[stageId] ?? 1.0;
 }
 
@@ -1723,6 +1823,28 @@ const PLANT_SUPP_PROFILE = {
   roses:        { calMag:"cond", silica:"optional", pk:"optional", root:"optional", enzyme:"optional", fulvic:"optional", sulfur:"skip",     bud:"skip"     },
   orchids:      { calMag:"cond", silica:"skip",     pk:"optional", root:"optional", enzyme:"optional", fulvic:"skip",     sulfur:"skip",     bud:"skip"     },
   houseplants:  { calMag:"cond", silica:"skip",     pk:"skip",     root:"optional", enzyme:"skip",     fulvic:"skip",     sulfur:"skip",     bud:"skip"     },
+  // Fruiting vegetables
+  squash:       { calMag:"cond", silica:"optional", pk:"optional", root:"optional", enzyme:"optional", fulvic:"optional", sulfur:"skip",     bud:"skip"     },
+  eggplant:     { calMag:"cond", silica:"optional", pk:"optional", root:"optional", enzyme:"optional", fulvic:"optional", sulfur:"skip",     bud:"skip"     },
+  beans:        { calMag:"cond", silica:"skip",     pk:"optional", root:"optional", enzyme:"optional", fulvic:"optional", sulfur:"skip",     bud:"skip"     },
+  corn:         { calMag:"cond", silica:"optional", pk:"optional", root:"optional", enzyme:"optional", fulvic:"optional", sulfur:"skip",     bud:"skip"     },
+  melons:       { calMag:"cond", silica:"optional", pk:"optional", root:"optional", enzyme:"optional", fulvic:"optional", sulfur:"skip",     bud:"optional" },
+  // Leafy greens
+  spinach:      { calMag:"cond", silica:"skip",     pk:"skip",     root:"optional", enzyme:"optional", fulvic:"skip",     sulfur:"skip",     bud:"skip"     },
+  kale:         { calMag:"cond", silica:"skip",     pk:"skip",     root:"optional", enzyme:"optional", fulvic:"skip",     sulfur:"skip",     bud:"skip"     },
+  brassicas:    { calMag:"cond", silica:"skip",     pk:"skip",     root:"optional", enzyme:"optional", fulvic:"optional", sulfur:"optional", bud:"skip"     },
+  // Root & tuber
+  potatoes:     { calMag:"cond", silica:"optional", pk:"optional", root:"optional", enzyme:"optional", fulvic:"optional", sulfur:"skip",     bud:"skip"     },
+  carrots:      { calMag:"cond", silica:"skip",     pk:"optional", root:"optional", enzyme:"optional", fulvic:"skip",     sulfur:"skip",     bud:"skip"     },
+  onions:       { calMag:"cond", silica:"skip",     pk:"skip",     root:"optional", enzyme:"optional", fulvic:"skip",     sulfur:"optional", bud:"skip"     },
+  radishes:     { calMag:"cond", silica:"skip",     pk:"skip",     root:"optional", enzyme:"skip",     fulvic:"skip",     sulfur:"skip",     bud:"skip"     },
+  // Berries
+  blueberries:  { calMag:"cond", silica:"skip",     pk:"skip",     root:"optional", enzyme:"optional", fulvic:"optional", sulfur:"optional", bud:"skip"     },
+  caneberries:  { calMag:"cond", silica:"optional", pk:"optional", root:"optional", enzyme:"optional", fulvic:"optional", sulfur:"skip",     bud:"skip"     },
+  // Flowers
+  annuals:      { calMag:"cond", silica:"optional", pk:"optional", root:"optional", enzyme:"optional", fulvic:"optional", sulfur:"skip",     bud:"skip"     },
+  // Succulents
+  succulents:   { calMag:"cond", silica:"skip",     pk:"skip",     root:"optional", enzyme:"skip",     fulvic:"skip",     sulfur:"skip",     bud:"skip"     },
 };
 
 const SUPP_CATEGORY_KEY = {
@@ -2041,7 +2163,7 @@ export default function FloraApp() {
     const p=PLANTS.find(x=>x.id===plant),s=STAGE_META[stage];
     const name=saveName.trim()||`${p?.name} · ${s?.label}`;
     const id=`run:${Date.now()}`;
-    const run={id,name,system,plant,stage,strength,volume,unit,water,supps:[...supps],savedAt:Date.now()};
+    const run={id,name,system,plant,stage,strength,volume,unit,water,substrate,supps:[...supps],savedAt:Date.now()};
     try{
       const res=tentStore.set(id,JSON.stringify(run));
       if(typeof window!=="undefined"&&window.storage){try{await window.storage.set(id,JSON.stringify(run));}catch{}}
@@ -2083,7 +2205,7 @@ export default function FloraApp() {
     const br=cfg?.brand||(sys.startsWith("florapro")?"florapro":sys.startsWith("biothrive")?"biothrive":sys.startsWith("maxi")?"maxi":sys.startsWith("floranvoa")?"floranvoa":"classic");
     setManufacturer(mfr);setBrand(br);setSystem(sys);setPlant(run.plant);setStage(run.stage);
     setStrength(run.strength);setVolume(run.volume);setUnit(run.unit);
-    setWater(run.water);setSupps(new Set(run.supps));setStep(targetStep);
+    setWater(run.water);setSubstrate(run.substrate||"hydro");setSupps(new Set(run.supps));setStep(targetStep);
   };
 
   const sysCfg      = system ? SYSTEM_CONFIGS[system] : null;
@@ -2094,6 +2216,7 @@ export default function FloraApp() {
   const plantEcCeil = plant ? (PLANT_MODIFIERS[plant]?.ecCeiling??DWC_EC_CEILING) : DWC_EC_CEILING;
   const plantModMeta= plant ? PLANT_MODIFIERS[plant] : null;
   const activeCropScale = system&&plant ? cropScaleFor(system,plant,stage,usePlantMod) : 1.0;
+  const hasPerBottle = !!(system&&PLANT_MOD_SYSTEMS.has(system)&&plantModMeta?.stages&&plantModMeta?.mods);
 
   const computed = useMemo(()=>{
     if(!system||!plant||!stage||volume<=0)return null;
@@ -2344,21 +2467,30 @@ export default function FloraApp() {
     if(step===4) return (
       <div>
         <div style={sectionLabel()}>SELECT CROP</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-          {PLANTS.map(p=>{
-            const sel=plant===p.id;
-            const stgCount=p.maxStages.filter(s=>sysCfg?.stages.includes(s)).length;
-            return (
-              <button key={p.id} onClick={()=>{setPlant(p.id);setStage(null);setSupps(new Set());setStep(5);}}
-                style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"20px 12px",background:sel?`linear-gradient(135deg,${GH.green}20,${GH.green}08)`:GH.card,border:`1px solid ${sel?GH.green:GH.border}`,cursor:"pointer",textAlign:"center",position:"relative",transition:"all 0.15s"}}>
-                {sel&&<div style={{position:"absolute",top:0,left:0,right:0,height:3,background:GH.green}}/>}
-                <span style={{fontSize:36,marginBottom:8}}>{p.icon}</span>
-                <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:15,fontWeight:700,color:sel?GH.green:GH.text,textTransform:"uppercase",letterSpacing:"0.04em"}}>{p.name}</div>
-                <div style={{fontSize:10,color:GH.dim,marginTop:3,fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif"}}>{stgCount} stage{stgCount!==1?"s":""}</div>
-              </button>
-            );
-          })}
-        </div>
+        {PLANT_CATEGORIES.map(cat=>{
+          const inCat=PLANTS.filter(p=>p.cat===cat.id);
+          if(inCat.length===0) return null;
+          return (
+            <div key={cat.id} style={{marginBottom:20}}>
+              <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontSize:11,fontWeight:700,letterSpacing:"0.08em",color:"#999",textTransform:"uppercase",marginBottom:10,paddingLeft:2}}>{cat.label}</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                {inCat.map(p=>{
+                  const sel=plant===p.id;
+                  const stgCount=p.maxStages.filter(s=>sysCfg?.stages.includes(s)).length;
+                  return (
+                    <button key={p.id} onClick={()=>{setPlant(p.id);setStage(null);setSupps(new Set());setStep(5);}}
+                      style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"18px 10px",background:sel?`linear-gradient(135deg,${GH.green}20,${GH.green}08)`:GH.card,border:`1px solid ${sel?GH.green:GH.border}`,borderRadius:14,cursor:"pointer",textAlign:"center",position:"relative",transition:"all 0.15s"}}>
+                      {sel&&<div style={{position:"absolute",top:0,left:0,right:0,height:3,background:GH.green,borderRadius:"14px 14px 0 0"}}/>}
+                      <span style={{fontSize:32,marginBottom:6}}>{p.icon}</span>
+                      <div style={{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:13,fontWeight:700,color:sel?GH.green:GH.text,letterSpacing:"0.01em",lineHeight:1.2}}>{p.name}</div>
+                      <div style={{fontSize:10,color:GH.dim,marginTop:3,fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif"}}>{stgCount} stage{stgCount!==1?"s":""}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
     );
 
@@ -2605,8 +2737,8 @@ export default function FloraApp() {
           </div>
         )}
 
-        {/* Plant modifier info box — GH Classic liquid systems only (only these doses change with the plant) */}
-        {sysCfg&&PLANT_MOD_SYSTEMS.has(sysCfg.id)&&plantModMeta&&(
+        {/* Per-bottle modifier box — GH Classic + original crops that have per-bottle data */}
+        {hasPerBottle&&(
           <div style={{background:GH.card,borderRadius:14,border:`1px solid ${usePlantMod?GH.green+"55":"#ccc"}`,borderLeft:`4px solid ${usePlantMod?GH.green:"#ccc"}`,marginBottom:12,overflow:"hidden"}}>
             {/* Header */}
             <div style={{padding:"12px 16px",borderBottom:`1px solid ${usePlantMod?GH.green+"22":GH.border}`}}>
@@ -2652,8 +2784,8 @@ export default function FloraApp() {
           </div>
         )}
 
-        {/* Crop scaler note — non-Classic systems when plant-specific dosing is on */}
-        {sysCfg&&!PLANT_MOD_SYSTEMS.has(sysCfg.id)&&usePlantMod&&plantObj&&(
+        {/* Crop scaler note — whenever the per-stage curve is in effect (any system without per-bottle data) */}
+        {sysCfg&&usePlantMod&&plantObj&&!hasPerBottle&&(
           <div style={{background:`${GH.green}0D`,borderRadius:14,border:`1px solid ${GH.green}44`,borderLeft:`4px solid ${GH.green}`,marginBottom:12,padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
             <span style={{fontSize:18,flexShrink:0}}>🌱</span>
             <div style={{flex:1,minWidth:0}}>
@@ -2727,20 +2859,14 @@ export default function FloraApp() {
             const isPhPerfect=sysCfg&&(sysCfg.id==="an_phperfect"||sysCfg.id==="an_sensi"||sysCfg.id==="an_connoisseur");
             return (
               <div style={{marginTop:10,padding:"16px",background:`${GH.green}0D`,borderRadius:14,border:`1px solid ${GH.green}55`}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.08em",color:GH.dim,textTransform:"uppercase",fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif"}}>Target pH after mixing</div>
-                    <div style={{fontSize:11,color:GH.dim,marginTop:3,fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif"}}>
-                      for {plantName}{pt.mediumLabel?<> in {pt.mediumLabel}</>:null}
-                    </div>
-                  </div>
-                  <div style={{flexShrink:0,textAlign:"right"}}>
-                    <span style={{fontSize:26,fontWeight:900,color:GH.green,fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif",letterSpacing:"-0.01em"}}>{pt.range}</span>
-                  </div>
+                <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.08em",color:GH.dim,textTransform:"uppercase",fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif"}}>Target pH after mixing</div>
+                <div style={{fontSize:26,fontWeight:900,color:GH.green,fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif",letterSpacing:"-0.01em",marginTop:5,lineHeight:1.1}}>{pt.range}</div>
+                <div style={{fontSize:11,color:GH.dim,marginTop:4,fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif"}}>
+                  for {plantName}{pt.mediumLabel?<> in {pt.mediumLabel}</>:null}
                 </div>
                 <div style={{fontSize:11,color:GH.dim,marginTop:10,paddingTop:10,borderTop:`1px solid ${GH.border}`,lineHeight:1.5,fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif"}}>
                   {isPhPerfect
-                    ? <>Adjust the mixed solution into this window with pH Up/Down. Your pH Perfect base self-buffers, so it'll pull toward this range on its own — but verify with a meter, especially in soilless.</>
+                    ? <>Adjust the mixed solution into this window with pH Up/Down. Your pH Perfect base self-buffers, so it'll pull toward this range on its own, but verify with a meter, especially in soilless.</>
                     : <>Mix all nutrients first, then measure and adjust with pH Up/Down to land in this range. Drifting slightly through the window over time is normal and healthy.</>}
                 </div>
               </div>
