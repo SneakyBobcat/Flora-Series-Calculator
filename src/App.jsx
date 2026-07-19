@@ -180,6 +180,12 @@ function chartUrlFor(sysCfg){
   return LINE_CHART_URLS[sysCfg.brand] || CHART_URLS[sysCfg.mfr] || null;
 }
 
+// Support / suggestions contact. Also listed in public/security.txt.
+const SUPPORT_EMAIL = "reservoirfarmcalc@gmail.com";
+const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`
+  + `?subject=${encodeURIComponent("Reservoir support or suggestion")}`
+  + `&body=${encodeURIComponent("Tell me what's on your mind. A few things that help:\n\n• A brand, product line, or crop you'd like added\n• A dose or pH target that looks off (which brand, crop, and stage?)\n• Anything in the app that isn't working right\n\n")}`;
+
 // Brand lines within each manufacturer. {id, name, color, systems:[systemId...]}
 const BRAND_LINES = {
   gh: [
@@ -2357,11 +2363,20 @@ export default function FloraApp() {
             );
           });
         })()}
-        <div style={{marginTop:24,paddingTop:20,borderTop:"1px solid #e0e0e0",textAlign:"center"}}>
-          <button onClick={()=>setShowDisclaimer(true)}
-            style={{background:"none",border:"1px solid #e0e0e0",color:"#777",fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontSize:12,padding:"10px 20px",cursor:"pointer",letterSpacing:"0.03em"}}>
-            ⚖ Legal Disclaimer
-          </button>
+        <div style={{marginTop:24,paddingTop:20,borderTop:"1px solid #e0e0e0"}}>
+          <div style={{fontSize:11,color:"#999",textAlign:"center",marginBottom:12,fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",lineHeight:1.5}}>
+            Missing a brand or crop? Spotted a dose that looks off? Let me know.
+          </div>
+          <div style={{display:"flex",gap:10,justifyContent:"center",alignItems:"center",flexWrap:"wrap"}}>
+            <a href={SUPPORT_MAILTO}
+              style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(120,190,32,0.08)",border:"1px solid rgba(120,190,32,0.45)",borderRadius:12,color:"#5a9a10",textDecoration:"none",fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontSize:12,fontWeight:600,padding:"10px 18px",letterSpacing:"0.03em"}}>
+              💬 Support & Suggestions
+            </a>
+            <button onClick={()=>setShowDisclaimer(true)}
+              style={{background:"none",border:"1px solid #e0e0e0",borderRadius:12,color:"#777",fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif",fontSize:12,padding:"10px 20px",cursor:"pointer",letterSpacing:"0.03em"}}>
+              ⚖ Legal Disclaimer
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -3075,13 +3090,15 @@ export default function FloraApp() {
               <button onClick={()=>setShowDisclaimer(false)} style={{background:"none",border:"none",fontSize:22,color:"#777",cursor:"pointer",lineHeight:1}}>✕</button>
             </div>
             {[
-              { title:"No Liability", body:"This application provides nutrient dosing guidance based on General Hydroponics' publicly available feedcharts and general agronomic best practices. Crop results vary significantly based on environmental conditions, water chemistry, genetics, growing methods, and grower experience. The creators of this app accept no responsibility or liability for crop loss, damage, reduced yield, or any other adverse outcome resulting from the use of this application." },
+              { title:"No Liability", body:"This application provides nutrient dosing guidance compiled from the publicly available feeding charts of multiple manufacturers and from general agronomic best practices. Crop results vary significantly based on environmental conditions, water chemistry, genetics, growing methods, substrate, and grower experience. The creators of this app accept no responsibility or liability for crop loss, damage, reduced yield, or any other adverse outcome resulting from the use of this application." },
+              { title:"Unofficial Estimates, Verify Official Charts", body:"The doses shown here are independent estimates, not the official figures of any manufacturer. Some brands' rates have been deliberately reduced from their labels because the published rates are widely considered too strong, and where a brand does not publish a full stage by stage chart, the values are reconstructed from typical patterns for that type of product. The optional plant specific adjustments are this app's own calibration, not a recommendation from any manufacturer. Always confirm against the brand's official feeding chart, which this app links to on the results page, and against your own EC or PPM meter and pH readings before you feed." },
               { title:'"As-Is" Software & No Warranty', body:'This application is provided on an "as-is" and "as-available" basis, without warranties of any kind, either express or implied. We are not liable for typographical errors, calculation bugs, system downtimes, or any damages arising from reliance on the software\'s outputs.' },
-              { title:"User Responsibility", body:"You are solely responsible for monitoring your plants, measuring EC and pH before and after mixing, and adjusting doses to suit your specific conditions. This app is a starting point — not a substitute for your own observation and judgment. Always start with the Light feed strength if you are new to a system or a new batch of inputs, and increase gradually based on plant response." },
+              { title:"User Responsibility", body:"You are solely responsible for monitoring your plants, measuring EC and pH before and after mixing, and adjusting doses to suit your specific conditions. This app is a starting point, not a substitute for your own observation and judgment. Always start with the Light feed strength if you are new to a system or a new batch of inputs, and increase gradually based on plant response." },
               { title:"Health & Consumption", body:"This application provides agricultural guidance only, not health, dietary, or medical advice. We make no guarantees regarding the safety, edibility, or quality of any harvested crops. Consuming the end product grown using guidance from this app is done entirely at your own risk." },
-              { title:"Not Affiliated with General Hydroponics", body:"This application is an independent tool and is not affiliated with, endorsed by, sponsored by, or officially supported by General Hydroponics, Hawthorne Gardening Company, or any of their subsidiaries. All product names, trademarks, and brand references are the property of their respective owners and are used here solely for identification purposes." },
+              { title:"Not Affiliated with Any Manufacturer", body:"This application is an independent tool. It is not affiliated with, endorsed by, sponsored by, or officially supported by any of the brands it references, including General Hydroponics, Advanced Nutrients, Botanicare, Fox Farm, CANNA, Athena, Jack's Nutrients, Humboldts Secret, Emerald Harvest, House & Garden, Dyna-Gro, Technaflora, Remo Nutrients, Heavy 16, Mills Nutrients, Roots Organics, and Nectar for the Gods, nor their parent companies. All product names, logos, trademarks, and brand references are the property of their respective owners and are used here solely for identification and compatibility purposes." },
               { title:"Start Low, Go Slow", body:"Feeding recommendations are provided at three strength tiers: Light, Medium, and Aggressive. If you are new to a system, a new strain, or growing in a new environment, always begin at the Light tier. Overfeeding is one of the most common causes of crop stress and nutrient lockout. It is far easier to correct an underfed plant than to recover from nutrient burn or salt toxicity." },
               { title:"Legal Compliance & Age Restriction", body:"This app does not make any representations about the legality of the crops you are growing. It is your sole responsibility to ensure that your growing activities comply with all applicable local, state, federal, and international laws and regulations. You must be of legal age in your jurisdiction to use this application. The inclusion of any plant type in this application does not constitute endorsement or encouragement of any illegal activity." },
+              { title:"Questions, Corrections & Contact", body:`If you spot a dose, pH target, or product listing that looks wrong, or you want a brand or crop added, please get in touch at ${SUPPORT_EMAIL}. Corrections from growers are welcome and are how this tool gets more accurate. The same address handles security reports and any request about this disclaimer.` },
               { title:"Modifications to Terms", body:"We reserve the right to modify this disclaimer at any time without prior notice. Continued use of the application constitutes acceptance of any changes." },
             ].map(({title,body})=>(
               <div key={title} style={{marginBottom:20}}>
