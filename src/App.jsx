@@ -183,7 +183,7 @@ function chartUrlFor(sysCfg){
 // Support / suggestions contact. Also listed in public/security.txt.
 const SUPPORT_EMAIL = "reservoirfarmcalc@gmail.com";
 const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`
-  + `?subject=${encodeURIComponent("Reservoir support or suggestion")}`
+  + `?subject=${encodeURIComponent("Reservoir Support or Suggestion")}`
   + `&body=${encodeURIComponent("Tell me what's on your mind. A few things that help:\n\n• A brand, product line, or crop you'd like added\n• A dose or pH target that looks off (which brand, crop, and stage?)\n• Anything in the app that isn't working right\n\n")}`;
 
 // Brand lines within each manufacturer. {id, name, color, systems:[systemId...]}
